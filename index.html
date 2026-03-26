@@ -188,6 +188,11 @@ function dodaj() {
   })
   .then(res => res.json())
   .then(data => alert("Dodano ID: " + data.id));
+  document.getElementById("imie").value = "";
+  document.getElementById("nazwisko").value = "";
+  document.getElementById("rocznik").value = "";
+  document.getElementById("konkurencje").value = "";
+  document.getElementById("nr").value = "";
 }
 
 </script>
