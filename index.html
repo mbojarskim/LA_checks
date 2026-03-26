@@ -257,6 +257,7 @@
     }
     
     // ==================== DODAWANIE NOWEGO ZAWODNIKA ====================
+    // ==================== DODAWANIE NOWEGO ZAWODNIKA ====================
     async function addNewZawodnik() {
         const imie = document.getElementById('newImie').value.trim();
         const nazwisko = document.getElementById('newNazwisko').value.trim();
@@ -272,34 +273,53 @@
         
         setDebug(`Dodawanie nowego zawodnika: ${imie} ${nazwisko}`);
         
-        const formData = new URLSearchParams();
-        formData.append('action', 'add');
-        formData.append('imie', imie);
-        formData.append('nazwisko', nazwisko);
-        formData.append('rocznik', rocznik);
-        formData.append('konkurencja1', konkurencja1);
-        formData.append('konkurencja2', konkurencja2);
-        formData.append('nr_startowy', nrStartowy);
+        // Buduj URL z parametrami
+        const params = new URLSearchParams();
+        params.append('action', 'add');
+        params.append('imie', imie);
+        params.append('nazwisko', nazwisko);
+        params.append('rocznik', rocznik);
+        params.append('konkurencja1', konkurencja1);
+        params.append('konkurencja2', konkurencja2);
+        params.append('nr_startowy', nrStartowy);
+        params.append('t', Date.now());
+        
+        const url = `${API_URL}?${params.toString()}`;
+        setDebug(`📤 Wysyłam: ${url.substring(0, 200)}...`);
         
         try {
-            const url = `${API_URL}?${formData.toString()}&t=${Date.now()}`;
-            setDebug(`📤 Wysyłam...`);
-            
             const response = await fetch(url);
             const text = await response.text();
             setDebug(`📥 Odpowiedź: ${text}`);
             
             let result;
-            try { result = JSON.parse(text); } catch(e) { throw new Error('Nieprawidłowa odpowiedź'); }
+            try {
+                result = JSON.parse(text);
+            } catch(e) {
+                setDebug(`❌ Błąd parsowania: ${text}`);
+                throw new Error('Nieprawidłowa odpowiedź z serwera');
+            }
             
             if (result.success) {
                 showAlert(`✅ Dodano zawodnika! Nowe ID: ${result.newId}`, false);
                 setDebug(`✅ Dodano zawodnika ID: ${result.newId}`);
-                clearAddForm();
+                
+                // Wyczyść formularz
+                document.getElementById('newImie').value = '';
+                document.getElementById('newNazwisko').value = '';
+                document.getElementById('newRocznik').value = '';
+                document.getElementById('newKonk1').value = '';
+                document.getElementById('newKonk2').value = '';
+                document.getElementById('newNrStartowy').value = '';
+                
+                // Zamknij modal
                 closeAddModal();
+                
+                // Automatycznie wczytaj nowego zawodnika
                 handleIdFound(result.newId);
             } else {
                 showAlert(`❌ Błąd: ${result.error}`);
+                setDebug(`❌ Błąd dodawania: ${result.error}`);
             }
         } catch(err) {
             setDebug(`❌ Błąd: ${err.message}`);
