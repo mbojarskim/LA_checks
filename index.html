@@ -1,148 +1,180 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Biuro Zawodów</title>
+<meta charset="UTF-8">
+<title>Biuro zawodów</title>
 
-  <script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
 
-  <style>
-    body {
-      font-family: Arial;
-      text-align: center;
-      background: #f5f5f5;
-    }
+<style>
+body { font-family: Arial; text-align: center; background:#f2f2f2; }
 
-    h1 {
-      font-size: 22px;
-    }
+button {
+  width: 90%;
+  padding: 18px;
+  margin: 8px;
+  font-size: 20px;
+  border: none;
+  border-radius: 10px;
+}
 
-    #reader {
-      width: 300px;
-      margin: auto;
-    }
+.green { background:#4CAF50; color:white; }
+.blue { background:#2196F3; color:white; }
+.orange { background:#ff9800; color:white; }
 
-    .card {
-      background: white;
-      padding: 15px;
-      margin: 15px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px #ccc;
-    }
+.card {
+  background:white;
+  margin:10px;
+  padding:15px;
+  border-radius:10px;
+}
 
-    button {
-      padding: 15px;
-      margin: 5px;
-      font-size: 18px;
-      border: none;
-      border-radius: 8px;
-    }
+input {
+  width:90%;
+  padding:12px;
+  margin:5px;
+  font-size:16px;
+}
+</style>
 
-    .green { background: #4CAF50; color: white; }
-    .blue { background: #2196F3; color: white; }
-    .red { background: #f44336; color: white; }
-
-    input {
-      padding: 10px;
-      margin: 5px;
-      width: 80%;
-      font-size: 16px;
-    }
-  </style>
 </head>
 
 <body>
 
-<h1>📋 Biuro zawodów</h1>
+<h2>📋 Biuro zawodów</h2>
+
+<!-- PRZYCISK SKANOWANIA -->
+<button class="blue" onclick="startScan()">📷 Skanuj zawodnika</button>
 
 <div id="reader"></div>
 
-<div id="wynik" class="card">Zeskanuj QR</div>
+<!-- DANE ZAWODNIKA -->
+<div id="zawodnik" class="card" style="display:none;"></div>
 
-<button class="blue" onclick="pokazDodawanie()">➕ Nowy zawodnik</button>
+<!-- FORMULARZ EDYCJI -->
+<div id="edycja" class="card" style="display:none;">
+  <h3>Edycja zawodnika</h3>
+  <input id="e_imie"><br>
+  <input id="e_nazwisko"><br>
+  <input id="e_rocznik"><br>
+  <input id="e_konkurencje"><br>
 
-<div id="dodawanie" class="card" style="display:none;">
-  <h3>Nowy zawodnik</h3>
+  <button class="green" onclick="zapiszEdycje()">💾 Zapisz</button>
+</div>
+
+<!-- DODAWANIE (zawsze na dole) -->
+<div class="card">
+  <h3>➕ Nowy zawodnik</h3>
   <input id="imie" placeholder="Imię"><br>
   <input id="nazwisko" placeholder="Nazwisko"><br>
   <input id="rocznik" placeholder="Rocznik"><br>
   <input id="konkurencje" placeholder="Konkurencje"><br>
 
-  <button class="green" onclick="dodaj()">Zapisz</button>
+  <button class="green" onclick="dodaj()">Dodaj</button>
 </div>
 
 <script>
 
 const API_URL = "https://script.google.com/macros/s/AKfycbyCa1bGgo4CarwRp3JjYYwML3SQghse-MvQxEjByvlXj8SLP5eXrPC-NZduQizwLgMx/exec";
+let currentId = null;
+let scanner = null;
 
-function onScanSuccess(decodedText) {
-  fetch(API_URL + "?id=" + decodedText)
+// START SKANOWANIA
+function startScan() {
+  document.getElementById("reader").innerHTML = "";
+
+  scanner = new Html5Qrcode("reader");
+
+  scanner.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: 250 },
+    onScanSuccess
+  );
+}
+
+// PO SKANIE
+function onScanSuccess(id) {
+  scanner.stop();
+
+  fetch(API_URL + "?id=" + id)
     .then(res => res.text())
     .then(text => {
+
       if (text === "NOT_FOUND") {
-        document.getElementById("wynik").innerHTML = "❌ Nie znaleziono";
+        alert("Nie znaleziono");
         return;
       }
 
-      const data = JSON.parse(text);
+      const d = JSON.parse(text);
+      currentId = d.id;
 
-      document.getElementById("wynik").innerHTML = `
-        <h2>${data.imie} ${data.nazwisko}</h2>
-        <b>Nr:</b> ${data.nr_startowy || "-"}<br>
-        <b>Rocznik:</b> ${data.rocznik}<br>
-        <b>Konkurencje:</b> ${data.konkurencje}<br>
-        <b>Pakiet:</b> ${data.pakiet}<br><br>
+      document.getElementById("zawodnik").style.display = "block";
 
-        <button class="green" onclick="checkin(${data.id})">✔ Wydaj pakiet</button>
+      document.getElementById("zawodnik").innerHTML = `
+        <h3>${d.imie} ${d.nazwisko}</h3>
+        Nr: ${d.nr_startowy || "-"}<br>
+        Rocznik: ${d.rocznik}<br>
+        Konkurencje: ${d.konkurencje}<br>
+        Pakiet: ${d.pakiet}<br><br>
+
+        <button class="green" onclick="checkin()">✔ Wydaj pakiet</button>
+        <button class="orange" onclick="pokazEdycje()">✏️ Edytuj</button>
       `;
+
+      // wypełnij edycję
+      document.getElementById("e_imie").value = d.imie;
+      document.getElementById("e_nazwisko").value = d.nazwisko;
+      document.getElementById("e_rocznik").value = d.rocznik;
+      document.getElementById("e_konkurencje").value = d.konkurencje;
     });
 }
 
-function checkin(id) {
+// WYDANIE PAKIETU
+function checkin() {
   fetch(API_URL, {
     method: "POST",
     body: JSON.stringify({
       action: "checkin",
-      id: id
+      id: currentId
     })
-  })
-  .then(() => {
-    alert("✅ Pakiet wydany");
-  });
+  }).then(() => alert("✅ Pakiet wydany"));
 }
 
-function pokazDodawanie() {
-  const el = document.getElementById("dodawanie");
-  el.style.display = el.style.display === "none" ? "block" : "none";
+// POKAŻ EDYCJĘ
+function pokazEdycje() {
+  document.getElementById("edycja").style.display = "block";
 }
 
+// ZAPIS EDYCJI
+function zapiszEdycje() {
+  fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      action: "edit",
+      id: currentId,
+      imie: document.getElementById("e_imie").value,
+      nazwisko: document.getElementById("e_nazwisko").value,
+      rocznik: document.getElementById("e_rocznik").value,
+      konkurencje: document.getElementById("e_konkurencje").value
+    })
+  }).then(() => alert("💾 Zapisano"));
+}
+
+// DODAWANIE
 function dodaj() {
-  const imie = document.getElementById("imie").value;
-  const nazwisko = document.getElementById("nazwisko").value;
-  const rocznik = document.getElementById("rocznik").value;
-  const konkurencje = document.getElementById("konkurencje").value;
-
   fetch(API_URL, {
     method: "POST",
     body: JSON.stringify({
       action: "add",
-      imie,
-      nazwisko,
-      rocznik,
-      konkurencje
+      imie: document.getElementById("imie").value,
+      nazwisko: document.getElementById("nazwisko").value,
+      rocznik: document.getElementById("rocznik").value,
+      konkurencje: document.getElementById("konkurencje").value
     })
   })
   .then(res => res.json())
-  .then(data => {
-    alert("✅ Dodano! ID: " + data.id);
-  });
+  .then(data => alert("Dodano ID: " + data.id));
 }
-
-new Html5Qrcode("reader").start(
-  { facingMode: "environment" },
-  { fps: 10, qrbox: 250 },
-  onScanSuccess
-);
 
 </script>
 
