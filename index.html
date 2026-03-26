@@ -3,125 +3,126 @@
 <head>
 <meta charset="UTF-8">
 <title>Biuro zawodów</title>
-
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
-body { font-family: Arial; text-align: center; background:#f2f2f2; }
+  body { font-family: Arial; text-align: center; background:#f2f2f2; margin: 0; padding: 10px; }
+  button { width: 90%; padding: 18px; margin: 8px; font-size: 20px; border: none; border-radius: 10px; cursor: pointer; }
+  
+  .green { background:#4CAF50; color:white; }
+  .blue { background:#2196F3; color:white; }
+  .orange { background:#ff9800; color:white; }
+  .gray { background:#757575; color:white; }
 
-button {
-  width: 90%;
-  padding: 18px;
-  margin: 8px;
-  font-size: 20px;
-  border: none;
-  border-radius: 10px;
-}
-
-.green { background:#4CAF50; color:white; }
-.blue { background:#2196F3; color:white; }
-.orange { background:#ff9800; color:white; }
-
-.card {
-  background:white;
-  margin:10px;
-  padding:15px;
-  border-radius:10px;
-}
-
-input {
-  width:90%;
-  padding:12px;
-  margin:5px;
-  font-size:16px;
-}
+  .card { background:white; margin:10px auto; padding:15px; border-radius:10px; max-width: 500px; display: none; }
+  input { width:90%; padding:12px; margin:5px; font-size:16px; border: 1px solid #ccc; border-radius: 5px; }
+  #menu { margin-bottom: 20px; }
 </style>
-
 </head>
 
 <body>
 
 <h2>📋 Biuro zawodów</h2>
 
-<!-- PRZYCISK SKANOWANIA -->
-<button class="blue" onclick="startScan()">📷 Skanuj zawodnika</button>
+<!-- GŁÓWNE MENU -->
+<div id="menu">
+  <button class="blue" onclick="pokazSekcje('sekcja-skanuj')">📷 Skanuj</button>
+  <button class="green" onclick="pokazSekcje('sekcja-nowy')">➕ Nowy zawodnik</button>
+  <button class="gray" onclick="pokazSekcje('sekcja-szukaj')">🔍 Szukaj (dummy)</button>
+</div>
 
-<div id="reader"></div>
+<!-- SEKCJA: SKANOWANIE -->
+<div id="sekcja-skanuj" class="card">
+  <div id="reader"></div>
+  <div id="zawodnik" style="margin-top:20px;"></div>
+</div>
 
-<!-- DANE ZAWODNIKA -->
-<div id="zawodnik" class="card" style="display:none;"></div>
+<!-- SEKCJA: NOWY ZAWODNIK -->
+<div id="sekcja-nowy" class="card">
+  <h3>Dodaj nowego zawodnika</h3>
+  <input id="imie" placeholder="Imię"><br>
+  <input id="nazwisko" placeholder="Nazwisko"><br>
+  <input id="rocznik" placeholder="Rocznik"><br>
+  <input id="konkurencje" placeholder="Konkurencje"><br>
+  <button class="green" onclick="dodaj()">Zapisz zawodnika</button>
+</div>
 
-<!-- FORMULARZ EDYCJI -->
-<div id="edycja" class="card" style="display:none;">
+<!-- SEKCJA: SZUKAJ (DUMMY) -->
+<div id="sekcja-szukaj" class="card">
+  <h3>Wyszukiwarka</h3>
+  <p>Opcja szukaj będzie dostępna wkrótce...</p>
+</div>
+
+<!-- MODAL EDYCJI (UKRYTY) -->
+<div id="edycja" class="card">
   <h3>Edycja zawodnika</h3>
   <input id="e_imie"><br>
   <input id="e_nazwisko"><br>
   <input id="e_rocznik"><br>
   <input id="e_konkurencje"><br>
-
-  <button class="green" onclick="zapiszEdycje()">💾 Zapisz</button>
-</div>
-
-<!-- DODAWANIE (zawsze na dole) -->
-<div class="card">
-  <h3>➕ Nowy zawodnik</h3>
-  <input id="imie" placeholder="Imię"><br>
-  <input id="nazwisko" placeholder="Nazwisko"><br>
-  <input id="rocznik" placeholder="Rocznik"><br>
-  <input id="konkurencje" placeholder="Konkurencje"><br>
-
-  <button class="green" onclick="dodaj()">Dodaj</button>
+  <button class="green" onclick="zapiszEdycje()">💾 Zapisz zmiany</button>
+  <button class="gray" onclick="this.parentElement.style.display='none'">Anuluj</button>
 </div>
 
 <script>
-
-const API_URL = "https://script.google.com/macros/s/AKfycbyCa1bGgo4CarwRp3JjYYwML3SQghse-MvQxEjByvlXj8SLP5eXrPC-NZduQizwLgMx/exec";
+const API_URL = "TU_WKLEJ_URL";
 let currentId = null;
 let scanner = null;
 
-// START SKANOWANIA
+// FUNKCJA PRZEŁĄCZANIA SEKCJI
+function pokazSekcje(idSekcji) {
+  // Ukryj wszystkie sekcje
+  document.querySelectorAll('.card').forEach(card => card.style.display = 'none');
+  
+  // Zatrzymaj skaner jeśli zmieniamy sekcję
+  if (scanner && idSekcji !== 'sekcja-skanuj') {
+    scanner.stop().catch(err => console.log(err));
+  }
+
+  // Pokaż wybraną
+  document.getElementById(idSekcji).style.display = "block";
+
+  // Jeśli wybrano skanowanie, odpal kamerę od razu
+  if (idSekcji === 'sekcja-skanuj') {
+    startScan();
+  }
+}
+
 function startScan() {
-  document.getElementById("reader").innerHTML = "";
-
-  scanner = new Html5Qrcode("reader");
-
+  if (!scanner) {
+    scanner = new Html5Qrcode("reader");
+  }
+  
   scanner.start(
     { facingMode: "environment" },
     { fps: 10, qrbox: 250 },
     onScanSuccess
-  );
+  ).catch(err => alert("Błąd kamery: " + err));
 }
 
-// PO SKANIE
 function onScanSuccess(id) {
   scanner.stop();
-
   fetch(API_URL + "?id=" + id)
     .then(res => res.text())
     .then(text => {
-
       if (text === "NOT_FOUND") {
         alert("Nie znaleziono");
         return;
       }
-
       const d = JSON.parse(text);
       currentId = d.id;
-
-      document.getElementById("zawodnik").style.display = "block";
-
-      document.getElementById("zawodnik").innerHTML = `
-        <h3>${d.imie} ${d.nazwisko}</h3>
-        Nr: ${d.nr_startowy || "-"}<br>
-        Rocznik: ${d.rocznik}<br>
-        Konkurencje: ${d.konkurencje}<br>
-        Pakiet: ${d.pakiet}<br><br>
-
-        <button class="green" onclick="checkin()">✔ Wydaj pakiet</button>
-        <button class="orange" onclick="pokazEdycje()">✏️ Edytuj</button>
+      
+      const info = document.getElementById("zawodnik");
+      info.innerHTML = `
+        <div style="border-top: 2px solid #eee; padding-top: 10px;">
+          <h3>${d.imie} ${d.nazwisko}</h3>
+          Nr: ${d.nr_startowy || "-"}<br>
+          Rocznik: ${d.rocznik}<br>
+          <button class="green" onclick="checkin()">✔ Wydaj pakiet</button>
+          <button class="orange" onclick="pokazEdycje('${d.imie}', '${d.nazwisko}', '${d.rocznik}', '${d.konkurencje}')">✏️ Edytuj</button>
+        </div>
       `;
 
-      // wypełnij edycję
       document.getElementById("e_imie").value = d.imie;
       document.getElementById("e_nazwisko").value = d.nazwisko;
       document.getElementById("e_rocznik").value = d.rocznik;
@@ -129,23 +130,18 @@ function onScanSuccess(id) {
     });
 }
 
-// WYDANIE PAKIETU
+function pokazEdycje() {
+  document.getElementById("edycja").style.display = "block";
+  window.scrollTo(0, document.body.scrollHeight);
+}
+
 function checkin() {
   fetch(API_URL, {
     method: "POST",
-    body: JSON.stringify({
-      action: "checkin",
-      id: currentId
-    })
+    body: JSON.stringify({ action: "checkin", id: currentId })
   }).then(() => alert("✅ Pakiet wydany"));
 }
 
-// POKAŻ EDYCJĘ
-function pokazEdycje() {
-  document.getElementById("edycja").style.display = "block";
-}
-
-// ZAPIS EDYCJI
 function zapiszEdycje() {
   fetch(API_URL, {
     method: "POST",
@@ -157,25 +153,32 @@ function zapiszEdycje() {
       rocznik: document.getElementById("e_rocznik").value,
       konkurencje: document.getElementById("e_konkurencje").value
     })
-  }).then(() => alert("💾 Zapisano"));
+  }).then(() => {
+    alert("💾 Zapisano");
+    document.getElementById("edycja").style.display = "none";
+  });
 }
 
-// DODAWANIE
 function dodaj() {
+  const dane = {
+    action: "add",
+    imie: document.getElementById("imie").value,
+    nazwisko: document.getElementById("nazwisko").value,
+    rocznik: document.getElementById("rocznik").value,
+    konkurencje: document.getElementById("konkurencje").value
+  };
+
   fetch(API_URL, {
     method: "POST",
-    body: JSON.stringify({
-      action: "add",
-      imie: document.getElementById("imie").value,
-      nazwisko: document.getElementById("nazwisko").value,
-      rocznik: document.getElementById("rocznik").value,
-      konkurencje: document.getElementById("konkurencje").value
-    })
+    body: JSON.stringify(dane)
   })
   .then(res => res.json())
-  .then(data => alert("Dodano ID: " + data.id));
+  .then(data => {
+    alert("Dodano zawodnika! ID: " + data.id);
+    // Czyścimy pola
+    document.querySelectorAll('#sekcja-nowy input').forEach(i => i.value = "");
+  });
 }
-
 </script>
 
 </body>
