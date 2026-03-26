@@ -1,92 +1,489 @@
 <!DOCTYPE html>
-<html>
+<html lang="pl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-<title>Biuro zawodów</title>
-<script src="https://unpkg.com"></script>
-
-<style>
-  body { font-family: Arial, sans-serif; text-align: center; background:#f2f2f2; margin: 0; padding: 0; }
-  
-  /* APARAT NA GÓRZE - ZAWSZE WŁĄCZONY */
-  #reader { width: 100%; max-width: 500px; margin: 0 auto; background: black; }
-
-  .btn-big {
-    width: 90%;
-    padding: 25px;
-    margin: 10px auto;
-    font-size: 22px;
-    font-weight: bold;
-    border: none;
-    border-radius: 15px;
-    cursor: pointer;
-    display: block;
-  }
-
-  .blue { background:#2196F3; color:white; }
-  .green { background:#4CAF50; color:white; }
-  .orange { background:#ff9800; color:white; }
-  .gray { background:#757575; color:white; }
-
-  /* NAKŁADKA Z WYNIKIEM - APARAT DZIAŁA POD NIĄ */
-  #wynik-overlay { 
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-    background: white; z-index: 100; display: none; padding: 20px; box-sizing: border-box; 
-  }
-
-  .card { background:white; margin: 10px auto; padding: 20px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 90%; }
-  input { width: 100%; padding: 15px; margin: 8px 0; font-size: 18px; border: 1px solid #ccc; border-radius: 10px; box-sizing: border-box; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Obsługa Pakietów - Zawody</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', 'Roboto', sans-serif;
+        }
+        body {
+            background: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: white;
+            border-radius: 32px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            padding: 24px;
+            transition: all 0.2s;
+        }
+        h1 {
+            font-size: 1.8rem;
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .sub {
+            color: #475569;
+            border-left: 4px solid #3b82f6;
+            padding-left: 12px;
+            margin-bottom: 24px;
+        }
+        .scan-area {
+            background: #f8fafc;
+            border-radius: 24px;
+            padding: 20px;
+            text-align: center;
+            border: 2px dashed #cbd5e1;
+            margin-bottom: 24px;
+        }
+        video, #preview {
+            width: 100%;
+            max-width: 320px;
+            border-radius: 20px;
+            margin: 12px auto;
+            background: #000;
+        }
+        button {
+            background: #3b82f6;
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 12px 20px;
+            border-radius: 40px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.2s;
+            margin: 6px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        button:hover {
+            background: #2563eb;
+            transform: scale(0.98);
+        }
+        button.secondary {
+            background: #64748b;
+        }
+        button.warning {
+            background: #f97316;
+        }
+        button.success {
+            background: #10b981;
+        }
+        .card {
+            background: #f1f5f9;
+            border-radius: 24px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #334155;
+        }
+        .info-value {
+            font-weight: 500;
+            color: #0f172a;
+        }
+        .package-status {
+            background: #e6f7e6;
+            border-radius: 40px;
+            padding: 8px 16px;
+            display: inline-block;
+            font-weight: bold;
+            color: #2e7d32;
+        }
+        .package-absent {
+            background: #ffe6e6;
+            color: #c62828;
+        }
+        .edit-group {
+            margin: 16px 0;
+        }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 20px;
+            border: 1px solid #cbd5e1;
+            font-size: 1rem;
+            margin-top: 4px;
+        }
+        .flex-btns {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        .alert {
+            padding: 12px;
+            border-radius: 28px;
+            background: #fee2e2;
+            color: #b91c1c;
+            text-align: center;
+            margin: 16px 0;
+        }
+        hr {
+            margin: 20px 0;
+        }
+        footer {
+            font-size: 0.75rem;
+            text-align: center;
+            color: #94a3b8;
+            margin-top: 28px;
+        }
+        @media (max-width: 500px) {
+            .container { padding: 16px; }
+        }
+    </style>
 </head>
-
 <body>
+<div class="container" id="app">
+    <h1>📦 Odbiór pakietów</h1>
+    <div class="sub">Zeskanuj kod QR (ID zawodnika)</div>
 
-<div id="main-ui">
-  <div id="reader"></div>
-  
-  <div class="card">
-    <button class="green" onclick="pokazSekcje('sekcja-nowy')">➕ NOWY ZAWODNIK</button>
-    <button class="blue" onclick="pokazSekcje('sekcja-szukaj')">🔍 SZUKAJ</button>
-  </div>
+    <div class="scan-area">
+        <div id="reader" style="width:100%;"></div>
+        <button id="startScanBtn" class="secondary">📷 Uruchom skaner</button>
+        <button id="stopScanBtn" style="display:none;">⏹️ Zatrzymaj</button>
+        <p style="font-size:13px; margin-top:12px;">lub wpisz ID ręcznie:</p>
+        <input type="text" id="manualId" placeholder="np. 00123" style="width:70%; display:inline-block;">
+        <button id="manualSearchBtn">🔍 Szukaj</button>
+    </div>
+
+    <div id="resultPanel" style="display:none;">
+        <div class="card">
+            <h3>🏃 Dane zawodnika</h3>
+            <div id="playerInfo"></div>
+            
+            <div id="packageSection"></div>
+            
+            <div class="edit-group">
+                <h4>✏️ Edycja danych (przed odbiorem)</h4>
+                <div class="info-row">
+                    <span class="info-label">Imię:</span>
+                    <input type="text" id="editImie" placeholder="Imię">
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Nazwisko:</span>
+                    <input type="text" id="editNazwisko" placeholder="Nazwisko">
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Numer startowy:</span>
+                    <input type="text" id="editNrStartowy" placeholder="Numer startowy">
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Konkurencja1:</span>
+                    <input type="text" id="editKonk1" placeholder="Konkurencja 1">
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Konkurencja2:</span>
+                    <input type="text" id="editKonk2" placeholder="Konkurencja 2">
+                </div>
+            </div>
+            
+            <div class="flex-btns">
+                <button id="saveEditBtn" class="success">💾 Zapisz zmiany</button>
+                <button id="confirmPackageBtn" class="warning">✅ Potwierdź odbiór pakietu</button>
+                <button id="clearBtn" class="secondary">🗑️ Wyczyść / nowe wyszukanie</button>
+            </div>
+        </div>
+    </div>
+    <footer>Po zeskanowaniu możesz edytować dane przed odebraniem pakietu.</footer>
 </div>
 
-<!-- NAKŁADKA PO ZESKANOWANIU -->
-<div id="wynik-overlay">
-  <div id="info-zawodnik"></div>
-  <hr>
-  <button class="btn-big blue" onclick="zamknijWynik()">📷 SKANUJ KOLEJNEGO</button>
-  <button class="btn-big orange" onclick="pokazEdycje()">✏️ EDYTUJ DANE</button>
-</div>
-
-<!-- FORMULARZE (POJAWIAJĄ SIĘ NA DOLE) -->
-<div id="sekcja-nowy" class="card" style="display:none;">
-  <h3>➕ Nowy zawodnik</h3>
-  <input id="imie" placeholder="Imię">
-  <input id="nazwisko" placeholder="Nazwisko">
-  <input id="rocznik" placeholder="Rocznik">
-  <input id="konkurencje" placeholder="Konkurencje">
-  <button class="btn-big green" onclick="dodaj()">ZAPISZ</button>
-  <button class="btn-big gray" onclick="ukryjSekcje()">WSTECZ</button>
-</div>
-
-<div id="edycja" class="card" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 110; background: white;">
-  <h3>✏️ Edycja zawodnika</h3>
-  <input id="e_imie"> <input id="e_nazwisko"> <input id="e_rocznik"> <input id="e_konkurencje">
-  <button class="btn-big green" onclick="zapiszEdycje()">💾 ZAPISZ</button>
-  <button class="btn-big gray" onclick="document.getElementById('edycja').style.display='none'">ANULUJ</button>
-</div>
-
-<div id="sekcja-szukaj" class="card" style="display:none;">
-  <h3>🔍 Szukaj</h3>
-  <p>Wyszukiwarka w budowie...</p>
-  <button class="btn-big gray" onclick="ukryjSekcje()">WSTECZ</button>
-</div>
+<!-- Biblioteka HTML5 QR Code -->
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
 <script>
-const API_URL = "TU_WKLEJ_URL";
-let currentId = null;
-let lastScanTime = 0;
-
-// DŹWIĘK BEEP
-const beep = new Audio("data:audio/wav;base64,UklGRl9vT19XQVZFRm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YTtvT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT19vT1
+    // ==================== KONFIGURACJA ====================
+    // 🔁 ZMIEŃ TEN URL NA ADRES TWOJEGO WDROŻONEGO SKRYPTU APPS SCRIPT
+    const API_URL = 'https://script.google.com/macros/s/AKfycbxxxxxx/exec'; // <-- WKLEJ SWÓJ URL
+    
+    let currentRowIndex = null;      // numer wiersza w sheets (1-indexed)
+    let currentPlayerData = null;    // przechowuje obiekt z danymi
+    let html5QrCode = null;
+    
+    // Elementy DOM
+    const resultPanel = document.getElementById('resultPanel');
+    const playerInfoDiv = document.getElementById('playerInfo');
+    const packageSection = document.getElementById('packageSection');
+    
+    // Pola edycji
+    const editImie = document.getElementById('editImie');
+    const editNazwisko = document.getElementById('editNazwisko');
+    const editNrStartowy = document.getElementById('editNrStartowy');
+    const editKonk1 = document.getElementById('editKonk1');
+    const editKonk2 = document.getElementById('editKonk2');
+    
+    // Przyciski
+    const startScanBtn = document.getElementById('startScanBtn');
+    const stopScanBtn = document.getElementById('stopScanBtn');
+    const manualSearchBtn = document.getElementById('manualSearchBtn');
+    const saveEditBtn = document.getElementById('saveEditBtn');
+    const confirmPackageBtn = document.getElementById('confirmPackageBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const manualIdInput = document.getElementById('manualId');
+    
+    // ==================== FUNKCJE POMOCNICZE ====================
+    function showAlert(msg, isError = true) {
+        const oldAlert = document.querySelector('.alert');
+        if(oldAlert) oldAlert.remove();
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert';
+        alertDiv.innerText = msg;
+        document.getElementById('app').insertBefore(alertDiv, resultPanel);
+        setTimeout(() => alertDiv.remove(), 4000);
+    }
+    
+    // Pobieranie danych z arkusza po ID
+    async function fetchPlayerById(id) {
+        try {
+            const url = `${API_URL}?id=${encodeURIComponent(id)}`;
+            const response = await fetch(url);
+            const data = await response.json();
+            if(data.error) {
+                showAlert(data.error);
+                return null;
+            }
+            return data; // { rowIndex, data: { Imię, Nazwisko, ... } }
+        } catch(err) {
+            console.error(err);
+            showAlert("Błąd połączenia z serwerem");
+            return null;
+        }
+    }
+    
+    // Wysyłanie aktualizacji do arkusza
+    async function updatePlayer(updatesObj) {
+        if(!currentRowIndex) {
+            showAlert("Nie wczytano danych zawodnika");
+            return false;
+        }
+        try {
+            const payload = {
+                rowIndex: currentRowIndex,
+                updates: updatesObj
+            };
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                mode: 'no-cors', // uwaga: w trybie no-cors nie dostajemy odpowiedzi JSON, ale zapis zadziała
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            // Ze względu na no-cors nie możemy odczytać odpowiedzi, ale zakładamy sukces
+            showAlert("✅ Zaktualizowano dane!", false);
+            return true;
+        } catch(err) {
+            console.error(err);
+            showAlert("Błąd aktualizacji");
+            return false;
+        }
+    }
+    
+    // Renderowanie danych w panelu
+    function renderPlayerPanel(dataObj) {
+        const d = dataObj.data;
+        // Wyświetlenie podstawowych informacji
+        let konkurencjeHtml = '';
+        const konk1 = d.Konkurencja1 || '—';
+        const konk2 = d.Konkurencja2 || '—';
+        if(konk1 === '—' && konk2 === '—') konkurencjeHtml = '<span style="color:gray;">Nie startuje w żadnej konkurencji</span>';
+        else konkurencjeHtml = `${konk1} ${konk2 !== '—' ? ' / ' + konk2 : ''}`;
+        
+        const startNumber = d.Nr_startowy || 'Nieprzydzielony';
+        
+        playerInfoDiv.innerHTML = `
+            <div class="info-row"><span class="info-label">ID:</span><span class="info-value">${d.ID || '?'}</span></div>
+            <div class="info-row"><span class="info-label">Imię i nazwisko:</span><span class="info-value">${d.Imię || ''} ${d.Nazwisko || ''}</span></div>
+            <div class="info-row"><span class="info-label">Rocznik:</span><span class="info-value">${d.Rocznik || '—'}</span></div>
+            <div class="info-row"><span class="info-label">Konkurencje:</span><span class="info-value">${konkurencjeHtml}</span></div>
+            <div class="info-row"><span class="info-label">Numer startowy:</span><span class="info-value">${startNumber}</span></div>
+        `;
+        
+        // Pakiet odebrany?
+        const isTaken = d.Pakiet_Odebrany === 'TAK';
+        packageSection.innerHTML = `
+            <div class="info-row">
+                <span class="info-label">Status pakietu:</span>
+                <span class="package-status ${isTaken ? '' : 'package-absent'}">${isTaken ? '✅ ODEBRANY' : '❌ NIEODEBRANY'}</span>
+            </div>
+            ${isTaken ? '<p style="color:green; margin-top:8px;">✔️ Pakiet został już wcześniej odebrany. Możesz edytować dane lub odświeżyć.</p>' : ''}
+        `;
+        
+        // Wypełnij pola edycji aktualnymi danymi
+        editImie.value = d.Imię || '';
+        editNazwisko.value = d.Nazwisko || '';
+        editNrStartowy.value = d.Nr_startowy || '';
+        editKonk1.value = d.Konkurencja1 || '';
+        editKonk2.value = d.Konkurencja2 || '';
+        
+        // Jeśli pakiet już odebrany, można tylko edytować, przycisk odbioru nie robi nic (ale też można dać komunikat)
+        if(isTaken) {
+            confirmPackageBtn.disabled = false; // można kliknąć, ale sprawdzimy w funkcji
+            confirmPackageBtn.style.opacity = '0.7';
+        } else {
+            confirmPackageBtn.disabled = false;
+            confirmPackageBtn.style.opacity = '1';
+        }
+    }
+    
+    // Główna funkcja po znalezieniu ID
+    async function handleIdFound(id) {
+        stopScanner();
+        const result = await fetchPlayerById(id);
+        if(result && result.data) {
+            currentRowIndex = result.rowIndex;
+            currentPlayerData = result.data;
+            resultPanel.style.display = 'block';
+            renderPlayerPanel(result);
+        } else {
+            resultPanel.style.display = 'none';
+            currentRowIndex = null;
+        }
+    }
+    
+    // Zapis zmian (edycja)
+    async function saveEdits() {
+        if(!currentRowIndex) {
+            showAlert("Brak załadowanego zawodnika");
+            return;
+        }
+        const updates = {
+            Imię: editImie.value,
+            Nazwisko: editNazwisko.value,
+            Nr_startowy: editNrStartowy.value,
+            Konkurencja1: editKonk1.value,
+            Konkurencja2: editKonk2.value
+        };
+        await updatePlayer(updates);
+        // Odśwież dane po zapisie
+        const id = currentPlayerData?.ID;
+        if(id) {
+            const refreshed = await fetchPlayerById(id);
+            if(refreshed && refreshed.data) {
+                currentRowIndex = refreshed.rowIndex;
+                currentPlayerData = refreshed.data;
+                renderPlayerPanel(refreshed);
+            }
+        }
+    }
+    
+    // Potwierdzenie odbioru pakietu
+    async function confirmPackage() {
+        if(!currentRowIndex) {
+            showAlert("Nie ma aktywnego zawodnika");
+            return;
+        }
+        // Sprawdź aktualny stan pakietu
+        const isAlreadyTaken = currentPlayerData?.Pakiet_Odebrany === 'TAK';
+        if(isAlreadyTaken) {
+            showAlert("Pakiet był już oznaczony jako odebrany! Jeśli chcesz zmienić, użyj edycji (ale zazwyczaj pakietu nie cofa się).", false);
+            return;
+        }
+        const updates = { Pakiet_Odebrany: 'TAK' };
+        await updatePlayer(updates);
+        // Odśwież dane
+        const id = currentPlayerData?.ID;
+        if(id) {
+            const refreshed = await fetchPlayerById(id);
+            if(refreshed && refreshed.data) {
+                currentRowIndex = refreshed.rowIndex;
+                currentPlayerData = refreshed.data;
+                renderPlayerPanel(refreshed);
+            }
+        }
+    }
+    
+    // Czyszczenie panelu
+    function clearPanel() {
+        resultPanel.style.display = 'none';
+        currentRowIndex = null;
+        currentPlayerData = null;
+        manualIdInput.value = '';
+    }
+    
+    // ==================== SKANER KODÓW QR ====================
+    function startScanner() {
+        if(html5QrCode) {
+            html5QrCode.stop().then(() => {
+                startNewScanner();
+            }).catch(() => startNewScanner());
+        } else {
+            startNewScanner();
+        }
+    }
+    
+    function startNewScanner() {
+        html5QrCode = new Html5Qrcode("reader");
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+        html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
+            // Sukces
+            handleIdFound(decodedText.trim());
+        }, (error) => {
+            // ignoruj błędy odczytu
+        }).catch(err => {
+            console.warn("Błąd kamery: ", err);
+            showAlert("Nie udało się uruchomić kamery. Sprawdź uprawnienia.");
+        });
+        startScanBtn.style.display = 'none';
+        stopScanBtn.style.display = 'inline-block';
+    }
+    
+    function stopScanner() {
+        if(html5QrCode && html5QrCode.isScanning) {
+            html5QrCode.stop().then(() => {
+                startScanBtn.style.display = 'inline-block';
+                stopScanBtn.style.display = 'none';
+            }).catch(() => {});
+        } else {
+            startScanBtn.style.display = 'inline-block';
+            stopScanBtn.style.display = 'none';
+        }
+    }
+    
+    // ==================== OBSŁUGA ZDARZEŃ ====================
+    startScanBtn.addEventListener('click', startScanner);
+    stopScanBtn.addEventListener('click', stopScanner);
+    manualSearchBtn.addEventListener('click', () => {
+        const manualId = manualIdInput.value.trim();
+        if(manualId) {
+            stopScanner();
+            handleIdFound(manualId);
+        } else {
+            showAlert("Wprowadź ID");
+        }
+    });
+    saveEditBtn.addEventListener('click', saveEdits);
+    confirmPackageBtn.addEventListener('click', confirmPackage);
+    clearBtn.addEventListener('click', clearPanel);
+    
+    // Ewentualne automatyczne zamknięcie skanera przy rozładowaniu strony
+    window.addEventListener('beforeunload', () => {
+        if(html5QrCode && html5QrCode.isScanning) {
+            html5QrCode.stop();
+        }
+    });
+    
+    console.log("Aplikacja gotowa, podmień API_URL na swój endpoint Apps Script");
+</script>
+</body>
+</html>
