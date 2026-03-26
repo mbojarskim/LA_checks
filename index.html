@@ -69,6 +69,7 @@ input {
   <input id="nazwisko" placeholder="Nazwisko"><br>
   <input id="rocznik" placeholder="Rocznik"><br>
   <input id="konkurencje" placeholder="Konkurencje"><br>
+  <input id="nr" placeholder="Numer startowy"><br>
 
   <button class="green" onclick="dodaj()">Dodaj</button>
 </div>
@@ -91,7 +92,13 @@ function startScan() {
     onScanSuccess
   );
 }
-
+// reste widoku
+function resetWidok() {
+  document.getElementById("zawodnik").style.display = "none";
+  document.getElementById("edycja").style.display = "none";
+  document.getElementById("reader").innerHTML = "";
+  currentId = null;
+}
 // PO SKANIE
 function onScanSuccess(id) {
   scanner.stop();
@@ -137,7 +144,10 @@ function checkin() {
       action: "checkin",
       id: currentId
     })
-  }).then(() => alert("✅ Pakiet wydany"));
+  }).then(() => {
+  alert("✅ Pakiet wydany");
+  resetWidok();
+});
 }
 
 // POKAŻ EDYCJĘ
@@ -157,7 +167,10 @@ function zapiszEdycje() {
       rocznik: document.getElementById("e_rocznik").value,
       konkurencje: document.getElementById("e_konkurencje").value
     })
-  }).then(() => alert("💾 Zapisano"));
+  }).then(() => {
+  alert("💾 Zapisano");
+  resetWidok();
+});
 }
 
 // DODAWANIE
@@ -169,7 +182,8 @@ function dodaj() {
       imie: document.getElementById("imie").value,
       nazwisko: document.getElementById("nazwisko").value,
       rocznik: document.getElementById("rocznik").value,
-      konkurencje: document.getElementById("konkurencje").value
+      konkurencje: document.getElementById("konkurencje").value,
+      nr_startowy: document.getElementById("nr").value
     })
   })
   .then(res => res.json())
