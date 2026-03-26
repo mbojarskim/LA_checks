@@ -163,7 +163,6 @@
             margin-top: 20px;
         }
         
-        /* Nowa klasa dla przycisku odbioru - wyśrodkowany */
         .package-btn-container {
             display: flex;
             justify-content: center;
@@ -209,6 +208,20 @@
             border-top: 1px solid #e2e8f0;
         }
         
+        .search-result-item {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .search-result-item:hover {
+            background: #e2e8f0;
+        }
+        
         @media (max-width: 500px) {
             .container {
                 padding: 16px;
@@ -235,6 +248,16 @@
             <input type="text" id="manualId" placeholder="np. 123" style="flex: 1;">
             <button id="manualSearchBtn">🔍 Szukaj</button>
         </div>
+        
+        <hr style="margin: 15px 0;">
+        <p style="font-size:13px; font-weight: bold; margin-bottom: 8px;">🔍 Szukaj po nazwisku:</p>
+        <div style="display: flex; gap: 8px;">
+            <input type="text" id="searchNazwisko" placeholder="Wpisz nazwisko" style="flex: 1;">
+            <button id="searchByNazwiskoBtn">🔎 Szukaj</button>
+        </div>
+        <div id="searchResults" style="display:none; margin-top: 15px; background: white; border-radius: 16px; padding: 12px; max-height: 250px; overflow-y: auto;">
+            <div id="resultsList"></div>
+        </div>
     </div>
 
     <div id="resultPanel" style="display:none;">
@@ -242,7 +265,6 @@
             <h3>🏃 Dane zawodnika</h3>
             <div id="playerInfo"></div>
             
-            <!-- Przycisk potwierdzenia odbioru - pod danymi zawodnika, wyśrodkowany -->
             <div class="package-btn-container">
                 <button id="confirmPackageBtn" class="warning">✅ Potwierdź odbiór pakietu</button>
             </div>
@@ -277,7 +299,6 @@
                 </div>
             </div>
             
-            <!-- Przyciski edycji - wyśrodkowane -->
             <div class="flex-btns">
                 <button id="saveEditBtn" class="success">💾 Zapisz zmiany</button>
                 <button id="clearBtn" class="secondary">🔄 Wróć do skanowania</button>
@@ -299,7 +320,7 @@
 <script>
     // ==================== KONFIGURACJA ====================
     // 🔁 ZMIEŃ TEN URL NA SWÓJ Z APPS SCRIPT!
-    const API_URL = 'https://script.google.com/macros/s/AKfycbzefvaEHEVOSkogq2HjemmOAluIFhVqmnZvmvt1pB8clSlQqcZVyYmFOjZ9jwwL4ZQ9/exec';
+    const API_URL = 'https://script.google.com/macros/s/TWÓJ_URL/exec';
     
     // Zmienne globalne
     let currentRowIndex = null;
@@ -327,10 +348,15 @@
     const clearBtn = document.getElementById('clearBtn');
     const manualIdInput = document.getElementById('manualId');
     
+    // Elementy do wyszukiwania po nazwisku
+    const searchNazwisko = document.getElementById('searchNazwisko');
+    const searchByNazwiskoBtn = document.getElementById('searchByNazwiskoBtn');
+    const searchResults = document.getElementById('searchResults');
+    const resultsList = document.getElementById('resultsList');
+    
     // ==================== DŹWIĘK ====================
     function playBeep() {
         try {
-            // Tworzymy kontekst audio
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const oscillator = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
@@ -338,32 +364,17 @@
             oscillator.connect(gainNode);
             gainNode.connect(audioCtx.destination);
             
-            oscillator.frequency.value = 880; // 880 Hz - wysoki dźwięk
-            gainNode.gain.value = 0.3; // Głośność
+            oscillator.frequency.value = 880;
+            gainNode.gain.value = 0.3;
             
             oscillator.start();
             
-            // Wyłącz po 0.2 sekundy
             setTimeout(() => {
                 oscillator.stop();
                 audioCtx.close();
             }, 200);
         } catch(e) {
-            // Jeśli dźwięk nie jest wspierany, ignoruj
             console.log('Dźwięk nie jest wspierany:', e);
-        }
-    }
-    
-    // Alternatywna metoda - użycie prostego beep przez Audio
-    function playSimpleBeep() {
-        try {
-            const audio = new Audio();
-            // Używamy Data URI do stworzenia prostego beep
-            audio.src = "data:audio/wav;base64,U3RlYWxtYWtpbmc=";
-            audio.volume = 0.3;
-            audio.play().catch(e => console.log('Audio play failed:', e));
-        } catch(e) {
-            console.log('Simple beep failed:', e);
         }
     }
     
@@ -445,6 +456,69 @@
         }
     }
     
+    // ==================== WYSZUKIWANIE PO NAZWISKU ====================
+    async function searchByNazwisko() {
+        const nazwisko = searchNazwisko.value.trim();
+        
+        if (!nazwisko) {
+            showAlert("Wprowadź nazwisko do wyszukania");
+            return;
+        }
+        
+        setDebug(`🔍 Szukam nazwiska: ${nazwisko}`);
+        searchResults.style.display = 'block';
+        resultsList.innerHTML = '<div style="text-align:center; padding: 20px;">🔍 Szukam...</div>';
+        
+        try {
+            const url = `${API_URL}?search=nazwisko&nazwisko=${encodeURIComponent(nazwisko)}&t=${Date.now()}`;
+            const response = await fetch(url);
+            const results = await response.json();
+            
+            setDebug(`Znaleziono ${results.length} wyników`);
+            
+            if (results.length === 0) {
+                resultsList.innerHTML = '<div style="text-align:center; padding: 20px; color: #666;">❌ Nie znaleziono zawodników o podanym nazwisku</div>';
+                return;
+            }
+            
+            resultsList.innerHTML = results.map(player => `
+                <div onclick="selectPlayer(${player.rowIndex}, '${player.ID}')" class="search-result-item">
+                    <div style="font-weight: bold;">${player.Imię} ${player.Nazwisko}</div>
+                    <div style="font-size: 0.85rem; color: #666;">ID: ${player.ID} | Rocznik: ${player.Rocznik} | Nr startowy: ${player.Nr_startowy || 'brak'}</div>
+                    <div style="font-size: 0.85rem; margin-top: 4px;">
+                        ${player.Pakiet_Odebrany === 'TAK' ? 
+                            '<span style="color: #10b981;">✅ Pakiet odebrany</span>' : 
+                            '<span style="color: #f97316;">⚠️ Pakiet nieodebrany</span>'}
+                    </div>
+                </div>
+            `).join('');
+            
+        } catch(err) {
+            setDebug(`❌ Błąd wyszukiwania: ${err}`);
+            resultsList.innerHTML = '<div style="text-align:center; padding: 20px; color: #c62828;">❌ Błąd połączenia</div>';
+        }
+    }
+    
+    // Funkcja wyboru zawodnika z listy wyników
+    window.selectPlayer = async function(rowIndex, id) {
+        setDebug(`Wybrano zawodnika: ${id}`);
+        searchResults.style.display = 'none';
+        searchNazwisko.value = '';
+        
+        const result = await fetchPlayerById(id);
+        if(result && result.success) {
+            currentRowIndex = result.rowIndex;
+            currentPlayerData = result.data;
+            resultPanel.style.display = 'block';
+            renderPlayerPanel(result);
+            showAlert(`✅ Wybrano: ${result.data.Imię} ${result.data.Nazwisko}`, false);
+            setDebug(`✅ Zawodnik w wierszu ${currentRowIndex}`);
+            playBeep();
+        } else {
+            showAlert("Nie udało się pobrać danych zawodnika");
+        }
+    };
+    
     // ==================== RENDEROWANIE DANYCH ====================
     function renderPlayerPanel(dataObj) {
         const d = dataObj.data;
@@ -480,7 +554,6 @@
             </div>
         `;
         
-        // Zmiana koloru przycisku odbioru jeśli pakiet już odebrany
         if(isTaken) {
             confirmPackageBtn.style.opacity = '0.6';
             confirmPackageBtn.style.cursor = 'not-allowed';
@@ -491,7 +564,6 @@
             confirmPackageBtn.title = 'Potwierdź odbiór pakietu';
         }
         
-        // Wypełnij pola edycji
         editImie.value = d.Imię || '';
         editNazwisko.value = d.Nazwisko || '';
         editRocznik.value = d.Rocznik || '';
@@ -503,10 +575,7 @@
     // ==================== OBSŁUGA ZNAJDOWANIA ZAWODNIKA ====================
     async function handleIdFound(id) {
         setDebug(`✨ Zeskanowano / wpisano ID: ${id}`);
-        
-        // Odtwórz dźwięk przy zeskanowaniu
         playBeep();
-        
         stopScanner();
         
         const result = await fetchPlayerById(id);
@@ -591,7 +660,6 @@
                 currentPlayerData = refreshed.data;
                 renderPlayerPanel(refreshed);
                 showAlert("✅ Pakiet oznaczony jako odebrany!", false);
-                // Dodatkowy dźwięk potwierdzenia
                 playBeep();
             }
         }
@@ -603,8 +671,10 @@
         currentRowIndex = null;
         currentPlayerData = null;
         manualIdInput.value = '';
-        setDebug('Panel wyczyszczony');
-        showAlert("Panel wyczyszczony", false);
+        searchResults.style.display = 'none';
+        searchNazwisko.value = '';
+        setDebug('Panel wyczyszczony, powrót do skanowania');
+        showAlert("Powrót do skanowania", false);
     }
     
     // ==================== SKANER QR ====================
@@ -645,9 +715,7 @@
                     setDebug(`📷 Zeskanowano: ${decodedText}`);
                     handleIdFound(decodedText.trim());
                 },
-                (errorMessage) => {
-                    // Ignoruj błędy podczas skanowania
-                }
+                (errorMessage) => {}
             );
             
             isScanning = true;
@@ -690,6 +758,12 @@
     saveEditBtn.addEventListener('click', saveEdits);
     confirmPackageBtn.addEventListener('click', confirmPackage);
     clearBtn.addEventListener('click', clearPanel);
+    searchByNazwiskoBtn.addEventListener('click', searchByNazwisko);
+    searchNazwisko.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            searchByNazwisko();
+        }
+    });
     
     if (API_URL === 'https://script.google.com/macros/s/TWÓJ_URL/exec') {
         showAlert('⚠️ UWAGA: Musisz zmienić API_URL na swój adres z Apps Script!', true);
@@ -698,7 +772,7 @@
         setDebug(`✅ API_URL skonfigurowany: ${API_URL.substring(0, 60)}...`);
     }
     
-    setDebug('✅ Aplikacja gotowa! Kliknij "Uruchom skaner" lub wpisz ID ręcznie.');
+    setDebug('✅ Aplikacja gotowa! Kliknij "Uruchom skaner" lub wpisz ID ręcznie, lub szukaj po nazwisku.');
 </script>
 </body>
 </html>
