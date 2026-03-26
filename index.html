@@ -43,6 +43,14 @@ input {
 
 <h2>📋 Biuro zawodów</h2>
 
+<!-- PRZYCIK SZUKANIA -->
+<div class="card">
+  <h3>🔎 Wyszukaj zawodnika</h3>
+  <input id="szukaj" placeholder="Nazwisko">
+  <button class="blue" onclick="szukajZawodnika()">Szukaj</button>
+</div>
+
+  
 <!-- PRZYCISK SKANOWANIA -->
 <button class="blue" onclick="startScan()">📷 Skanuj zawodnika</button>
 
@@ -195,6 +203,37 @@ function dodaj() {
   document.getElementById("nr").value = "";
 }
 
+function szukajZawodnika() {
+  const nazwisko = document.getElementById("szukaj").value;
+
+  fetch(API_URL + "?search=" + nazwisko)
+    .then(res => res.json())
+    .then(lista => {
+
+      if (lista.length === 0) {
+        alert("Brak wyników");
+        return;
+      }
+
+      let html = "<h3>Wyniki:</h3>";
+
+      lista.forEach(z => {
+        html += `
+          <div style="margin:10px; padding:10px; border:1px solid #ccc;">
+            ${z.imie} ${z.nazwisko}
+            <br>
+            <button onclick="wybierzZawodnika(${z.id})">Wybierz</button>
+          </div>
+        `;
+      });
+
+      document.getElementById("zawodnik").style.display = "block";
+      document.getElementById("zawodnik").innerHTML = html;
+    });
+}
+function wybierzZawodnika(id) {
+  onScanSuccess(id); // reuse tej samej logiki co QR
+}  
 </script>
 
 </body>
