@@ -34,6 +34,9 @@
             margin-top: 0;
             margin-bottom: 0.5rem;
             color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         
         .sub {
@@ -160,6 +163,19 @@
             margin-top: 20px;
         }
         
+        /* Nowa klasa dla przycisku odbioru - wyśrodkowany */
+        .package-btn-container {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0 10px 0;
+        }
+        
+        .package-btn-container button {
+            min-width: 200px;
+            font-size: 1.1rem;
+            padding: 14px 24px;
+        }
+        
         .alert {
             padding: 12px;
             border-radius: 28px;
@@ -187,6 +203,12 @@
             overflow-y: auto;
         }
         
+        hr {
+            margin: 20px 0;
+            border: none;
+            border-top: 1px solid #e2e8f0;
+        }
+        
         @media (max-width: 500px) {
             .container {
                 padding: 16px;
@@ -196,7 +218,10 @@
 </head>
 <body>
 <div class="container" id="app">
-    <h1>📦 Odbiór pakietów</h1>
+    <h1>
+        <span>📦</span> 
+        <span>Odbiór pakietów</span>
+    </h1>
     <div class="sub">Zeskanuj kod QR (ID zawodnika)</div>
 
     <div class="scan-area">
@@ -216,7 +241,13 @@
         <div class="card">
             <h3>🏃 Dane zawodnika</h3>
             <div id="playerInfo"></div>
-            <div id="packageSection"></div>
+            
+            <!-- Przycisk potwierdzenia odbioru - pod danymi zawodnika, wyśrodkowany -->
+            <div class="package-btn-container">
+                <button id="confirmPackageBtn" class="warning">✅ Potwierdź odbiór pakietu</button>
+            </div>
+            
+            <hr>
             
             <div class="edit-group">
                 <h4>✏️ Edycja danych</h4>
@@ -246,10 +277,10 @@
                 </div>
             </div>
             
+            <!-- Przyciski edycji - wyśrodkowane -->
             <div class="flex-btns">
                 <button id="saveEditBtn" class="success">💾 Zapisz zmiany</button>
-                <button id="confirmPackageBtn" class="warning">✅ Potwierdź odbiór pakietu</button>
-                <button id="clearBtn" class="secondary">🗑️ Wyczyść</button>
+                <button id="clearBtn" class="secondary">🔄 Wróć do skanowania</button>
             </div>
         </div>
     </div>
@@ -268,7 +299,7 @@
 <script>
     // ==================== KONFIGURACJA ====================
     // 🔁 ZMIEŃ TEN URL NA SWÓJ Z APPS SCRIPT!
-    const API_URL = 'https://script.google.com/macros/s/AKfycbzefvaEHEVOSkogq2HjemmOAluIFhVqmnZvmvt1pB8clSlQqcZVyYmFOjZ9jwwL4ZQ9/exec';
+    const API_URL = 'https://script.google.com/macros/s/TWÓJ_URL/exec';
     
     // Zmienne globalne
     let currentRowIndex = null;
@@ -279,7 +310,6 @@
     // Elementy DOM
     const resultPanel = document.getElementById('resultPanel');
     const playerInfoDiv = document.getElementById('playerInfo');
-    const packageSection = document.getElementById('packageSection');
     const debugMsg = document.getElementById('debugMsg');
     
     const editImie = document.getElementById('editImie');
@@ -296,6 +326,46 @@
     const confirmPackageBtn = document.getElementById('confirmPackageBtn');
     const clearBtn = document.getElementById('clearBtn');
     const manualIdInput = document.getElementById('manualId');
+    
+    // ==================== DŹWIĘK ====================
+    function playBeep() {
+        try {
+            // Tworzymy kontekst audio
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            oscillator.frequency.value = 880; // 880 Hz - wysoki dźwięk
+            gainNode.gain.value = 0.3; // Głośność
+            
+            oscillator.start();
+            
+            // Wyłącz po 0.2 sekundy
+            setTimeout(() => {
+                oscillator.stop();
+                audioCtx.close();
+            }, 200);
+        } catch(e) {
+            // Jeśli dźwięk nie jest wspierany, ignoruj
+            console.log('Dźwięk nie jest wspierany:', e);
+        }
+    }
+    
+    // Alternatywna metoda - użycie prostego beep przez Audio
+    function playSimpleBeep() {
+        try {
+            const audio = new Audio();
+            // Używamy Data URI do stworzenia prostego beep
+            audio.src = "data:audio/wav;base64,U3RlYWxtYWtpbmc=";
+            audio.volume = 0.3;
+            audio.play().catch(e => console.log('Audio play failed:', e));
+        } catch(e) {
+            console.log('Simple beep failed:', e);
+        }
+    }
     
     // ==================== FUNKCJE POMOCNICZE ====================
     function showAlert(msg, isError = true) {
@@ -340,7 +410,6 @@
         }
         
         try {
-            // Przygotuj parametry do wysłania przez GET
             const params = new URLSearchParams();
             params.append('method', 'update');
             params.append('rowIndex', currentRowIndex);
@@ -380,6 +449,8 @@
     function renderPlayerPanel(dataObj) {
         const d = dataObj.data;
         
+        const isTaken = d.Pakiet_Odebrany === 'TAK';
+        
         playerInfoDiv.innerHTML = `
             <div class="info-row">
                 <span class="info-label">ID:</span>
@@ -401,18 +472,24 @@
                 <span class="info-label">Numer startowy:</span>
                 <span class="info-value">${d.Nr_startowy || 'Nieprzydzielony'}</span>
             </div>
-        `;
-        
-        const isTaken = d.Pakiet_Odebrany === 'TAK';
-        packageSection.innerHTML = `
             <div class="info-row">
                 <span class="info-label">Status pakietu:</span>
                 <span class="package-status ${isTaken ? '' : 'package-absent'}">
                     ${isTaken ? '✅ ODEBRANY' : '❌ NIEODEBRANY'}
                 </span>
             </div>
-            ${isTaken ? '<p style="color:green; margin-top:8px;">✔️ Pakiet został już odebrany</p>' : '<p style="color:orange; margin-top:8px;">⚠️ Pakiet nie został jeszcze odebrany</p>'}
         `;
+        
+        // Zmiana koloru przycisku odbioru jeśli pakiet już odebrany
+        if(isTaken) {
+            confirmPackageBtn.style.opacity = '0.6';
+            confirmPackageBtn.style.cursor = 'not-allowed';
+            confirmPackageBtn.title = 'Pakiet już odebrany';
+        } else {
+            confirmPackageBtn.style.opacity = '1';
+            confirmPackageBtn.style.cursor = 'pointer';
+            confirmPackageBtn.title = 'Potwierdź odbiór pakietu';
+        }
         
         // Wypełnij pola edycji
         editImie.value = d.Imię || '';
@@ -426,6 +503,10 @@
     // ==================== OBSŁUGA ZNAJDOWANIA ZAWODNIKA ====================
     async function handleIdFound(id) {
         setDebug(`✨ Zeskanowano / wpisano ID: ${id}`);
+        
+        // Odtwórz dźwięk przy zeskanowaniu
+        playBeep();
+        
         stopScanner();
         
         const result = await fetchPlayerById(id);
@@ -479,7 +560,6 @@
         const success = await updatePlayer(updates);
         
         if(success && currentPlayerData?.ID) {
-            // Odśwież dane
             const refreshed = await fetchPlayerById(currentPlayerData.ID);
             if(refreshed?.success) {
                 currentRowIndex = refreshed.rowIndex;
@@ -511,6 +591,8 @@
                 currentPlayerData = refreshed.data;
                 renderPlayerPanel(refreshed);
                 showAlert("✅ Pakiet oznaczony jako odebrany!", false);
+                // Dodatkowy dźwięk potwierdzenia
+                playBeep();
             }
         }
     }
@@ -534,14 +616,12 @@
         
         setDebug('Uruchamianie skanera...');
         
-        // Sprawdź wsparcie kamery
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             showAlert('Twoja przeglądarka nie wspiera kamery. Użyj ręcznego wpisywania ID.');
             setDebug('❌ Brak wsparcia dla kamery');
             return;
         }
         
-        // Zatrzymaj poprzedni skaner jeśli istnieje
         if (html5QrCode) {
             try {
                 await html5QrCode.stop();
@@ -549,7 +629,6 @@
             html5QrCode = null;
         }
         
-        // Utwórz nowy skaner
         html5QrCode = new Html5Qrcode("reader");
         
         const config = {
@@ -568,9 +647,6 @@
                 },
                 (errorMessage) => {
                     // Ignoruj błędy podczas skanowania
-                    if (errorMessage && !errorMessage.includes("No MultiFormat")) {
-                        // setDebug(`Skanowanie...`);
-                    }
                 }
             );
             
@@ -600,7 +676,6 @@
     }
     
     // ==================== INICJALIZACJA ====================
-    // Event listeners
     startScanBtn.addEventListener('click', startScanner);
     stopScanBtn.addEventListener('click', stopScanner);
     manualSearchBtn.addEventListener('click', () => {
@@ -616,7 +691,6 @@
     confirmPackageBtn.addEventListener('click', confirmPackage);
     clearBtn.addEventListener('click', clearPanel);
     
-    // Sprawdź konfigurację
     if (API_URL === 'https://script.google.com/macros/s/TWÓJ_URL/exec') {
         showAlert('⚠️ UWAGA: Musisz zmienić API_URL na swój adres z Apps Script!', true);
         setDebug('⚠️ API_URL nie został skonfigurowany!');
