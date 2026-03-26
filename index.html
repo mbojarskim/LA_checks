@@ -4,164 +4,180 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
 <title>Biuro zawodów</title>
+
 <script src="https://unpkg.com"></script>
 
 <style>
-  body { font-family: sans-serif; text-align: center; background:#f2f2f2; margin: 0; padding: 10px; }
-  
-  /* MENU GŁÓWNE - DUŻE PRZYCISKI */
-  .menu-grid { display: flex; flex-direction: column; gap: 10px; }
-  .btn-main { width: 100%; padding: 25px; font-size: 22px; font-weight: bold; border: none; border-radius: 15px; cursor: pointer; color: white; }
-  
-  .blue { background:#2196F3; }
-  .green { background:#4CAF50; }
-  .gray { background:#757575; }
-  .orange { background:#ff9800; }
+  body { font-family: Arial, sans-serif; text-align: center; background:#f2f2f2; margin: 0; padding: 10px; }
 
-  /* KONTENER SKANERA - MUSI BYĆ WIDOCZNY DLA BIBLIOTEKI */
-  #reader-wrapper { display: none; background: white; padding: 10px; border-radius: 15px; }
-  #reader { width: 100%; max-width: 500px; margin: 0 auto; }
+  /* OGROMNE PRZYCISKI */
+  button {
+    width: 100%;
+    padding: 25px;
+    margin: 10px 0;
+    font-size: 22px;
+    font-weight: bold;
+    border: none;
+    border-radius: 15px;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  }
 
-  .card { background:white; margin: 10px 0; padding: 20px; border-radius: 15px; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-  input { width: 95%; padding: 15px; margin: 10px 0; font-size: 18px; border: 1px solid #ccc; border-radius: 8px; }
+  .green { background:#4CAF50; color:white; }
+  .blue { background:#2196F3; color:white; }
+  .orange { background:#ff9800; color:white; }
+  .gray { background:#757575; color:white; }
+
+  .card {
+    background:white;
+    margin: 15px 0;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+
+  input {
+    width: 95%;
+    padding: 18px;
+    margin: 8px 0;
+    font-size: 18px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    box-sizing: border-box;
+  }
+
+  /* REZERWACJA MIEJSCA NA APARAT */
+  #reader { 
+    width: 100%; 
+    background: #000; 
+    border-radius: 15px; 
+    overflow: hidden;
+    margin-top: 10px;
+  }
 </style>
 </head>
 
 <body>
 
-<div id="ui-container">
-  <h2>📋 Biuro zawodów</h2>
+<h2>📋 Biuro zawodów 3.0</h2>
 
-  <div id="menu-glowne" class="menu-grid">
-    <button class="btn-main blue" onclick="startScan()">📷 SKANUJ KOD</button>
-    <button class="btn-main green" onclick="pokazSekcje('sekcja-nowy')">➕ NOWY ZAWODNIK</button>
-    <button class="btn-main gray" onclick="pokazSekcje('sekcja-szukaj')">🔍 SZUKAJ</button>
-  </div>
+<!-- GŁÓWNE PRZYCISKI -->
+<button class="blue" onclick="startScan()">📷 SKANUJ ZAWODNIKA</button>
+<button class="green" onclick="pokazNowego()">➕ NOWY ZAWODNIK</button>
+<button class="gray" onclick="alert('Opcja szukaj wkrótce')">🔍 SZUKAJ</button>
 
-  <!-- SEKCJA SKANERA -->
-  <div id="reader-wrapper">
-    <div id="reader"></div>
-    <button class="btn-main gray" style="margin-top:10px" onclick="stopScan()">⬅ ANULUJ</button>
-  </div>
+<div id="reader"></div>
 
-  <!-- WYNIK I EDYCJA -->
-  <div id="sekcja-wynik" class="card">
-    <div id="dane-zawodnika"></div>
-    <hr>
-    <h3>Edycja:</h3>
-    <input id="e_imie">
-    <input id="e_nazwisko">
-    <input id="e_rocznik">
-    <input id="e_konkurencje">
-    <button class="btn-main green" onclick="zapiszEdycje()">💾 ZAPISZ</button>
-    <button class="btn-main gray" onclick="ukryjWszystko()">WSTECZ</button>
-  </div>
+<!-- DANE ZAWODNIKA -->
+<div id="zawodnik" class="card" style="display:none;"></div>
 
-  <!-- NOWY ZAWODNIK -->
-  <div id="sekcja-nowy" class="card">
-    <h3>Nowy zawodnik</h3>
-    <input id="imie" placeholder="Imię">
-    <input id="nazwisko" placeholder="Nazwisko">
-    <input id="rocznik" placeholder="Rocznik">
-    <input id="konkurencje" placeholder="Konkurencje">
-    <button class="btn-main green" onclick="dodaj()">DODAJ</button>
-    <button class="btn-main gray" onclick="ukryjWszystko()">WSTECZ</button>
-  </div>
+<!-- FORMULARZ EDYCJI -->
+<div id="edycja" class="card" style="display:none;">
+  <h3>Edycja zawodnika</h3>
+  <input id="e_imie" placeholder="Imię">
+  <input id="e_nazwisko" placeholder="Nazwisko">
+  <input id="e_rocznik" placeholder="Rocznik">
+  <input id="e_konkurencje" placeholder="Konkurencje">
+  <button class="green" onclick="zapiszEdycje()">💾 Zapisz zmiany</button>
+  <button class="gray" onclick="document.getElementById('edycja').style.display='none'">Anuluj</button>
+</div>
 
-  <!-- SZUKAJ -->
-  <div id="sekcja-szukaj" class="card">
-    <h3>Wyszukiwarka</h3>
-    <p>Opcja dummy...</p>
-    <button class="btn-main gray" onclick="ukryjWszystko()">WSTECZ</button>
-  </div>
+<!-- DODAWANIE (DOMYŚLNIE UKRYTE) -->
+<div id="sekcja-nowy" class="card" style="display:none;">
+  <h3>➕ Nowy zawodnik</h3>
+  <input id="imie" placeholder="Imię"><br>
+  <input id="nazwisko" placeholder="Nazwisko"><br>
+  <input id="rocznik" placeholder="Rocznik"><br>
+  <input id="konkurencje" placeholder="Konkurencje"><br>
+  <button class="green" onclick="dodaj()">DODAJ ZAWODNIKA</button>
+  <button class="gray" onclick="document.getElementById('sekcja-nowy').style.display='none'">ANULUJ</button>
 </div>
 
 <script>
 const API_URL = "TU_WKLEJ_URL";
 let currentId = null;
-let html5QrCode = null;
+let scanner = null;
 
-function ukryjWszystko() {
-  document.getElementById('menu-glowne').style.display = 'flex';
-  document.getElementById('reader-wrapper').style.display = 'none';
-  document.querySelectorAll('.card').forEach(c => c.style.display = 'none');
+function pokazNowego() {
+    document.getElementById('sekcja-nowy').style.display = 'block';
+    window.scrollTo(0, document.body.scrollHeight);
 }
 
-function pokazSekcje(id) {
-  ukryjWszystko();
-  document.getElementById('menu-glowne').style.display = 'none';
-  document.getElementById(id).style.display = 'block';
-}
-
+// START SKANOWANIA (Logika z Twojego 1. kodu)
 function startScan() {
-  ukryjWszystko();
-  document.getElementById('menu-glowne').style.display = 'none';
-  document.getElementById('reader-wrapper').style.display = 'block';
+  document.getElementById("reader").innerHTML = "";
+  if(scanner) { scanner.clear(); }
 
-  if (!html5QrCode) {
-    html5QrCode = new Html5Qrcode("reader");
-  }
-
-  const config = { fps: 15, qrbox: { width: 250, height: 250 } };
-
-  // WYMUSZENIE KAMERY TYLNEJ
-  html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
-    .catch(err => {
-      alert("Kamera nie ruszyła. Spróbuj odświeżyć stronę i zaakceptować uprawnienia.");
-      ukryjWszystko();
-    });
+  scanner = new Html5Qrcode("reader");
+  scanner.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: 250 },
+    onScanSuccess
+  ).catch(err => alert("Błąd kamery: " + err));
 }
 
-function stopScan() {
-  if (html5QrCode && html5QrCode.isScanning) {
-    html5QrCode.stop().then(() => ukryjWszystko());
-  } else {
-    ukryjWszystko();
-  }
-}
-
+// PO SKANIE
 function onScanSuccess(id) {
-  html5QrCode.stop().then(() => {
-    document.getElementById('reader-wrapper').style.display = 'none';
-    pobierzDane(id);
-  });
-}
+  scanner.stop();
+  document.getElementById("reader").innerHTML = "";
 
-function pobierzDane(id) {
   fetch(API_URL + "?id=" + id)
-    .then(res => res.json())
-    .then(d => {
+    .then(res => res.text())
+    .then(text => {
+      if (text === "NOT_FOUND") {
+        alert("Nie znaleziono");
+        return;
+      }
+
+      const d = JSON.parse(text);
       currentId = d.id;
-      document.getElementById('sekcja-wynik').style.display = 'block';
-      document.getElementById('dane-zawodnika').innerHTML = `
+
+      document.getElementById("zawodnik").style.display = "block";
+      document.getElementById("zawodnik").innerHTML = `
         <h2 style="margin:0">${d.imie} ${d.nazwisko}</h2>
-        <p>Nr: <b>${d.nr_startowy || "brak"}</b></p>
-        <button class="btn-main orange" onclick="checkin()">✔ WYDAJ PAKIET</button>
+        <p>Nr startowy: <b>${d.nr_startowy || "-"}</b></p>
+        <p>Konkurencje: ${d.konkurencje}</p>
+        <button class="green" onclick="checkin()">✔ Wydaj pakiet</button>
+        <button class="orange" onclick="pokazEdycje()">✏️ Edytuj dane</button>
       `;
+
       document.getElementById("e_imie").value = d.imie;
       document.getElementById("e_nazwisko").value = d.nazwisko;
       document.getElementById("e_rocznik").value = d.rocznik;
       document.getElementById("e_konkurencje").value = d.konkurencje;
-    })
-    .catch(() => alert("Błąd danych"));
+    });
 }
 
 function checkin() {
-  fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "checkin", id: currentId }) })
-  .then(() => { alert("✅ Wydano!"); ukryjWszystko(); });
+  fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({ action: "checkin", id: currentId })
+  }).then(() => {
+      alert("✅ Pakiet wydany");
+      document.getElementById("zawodnik").style.display = "none";
+  });
+}
+
+function pokazEdycje() {
+  document.getElementById("edycja").style.display = "block";
 }
 
 function zapiszEdycje() {
   fetch(API_URL, {
     method: "POST",
     body: JSON.stringify({
-      action: "edit", id: currentId,
+      action: "edit",
+      id: currentId,
       imie: document.getElementById("e_imie").value,
       nazwisko: document.getElementById("e_nazwisko").value,
       rocznik: document.getElementById("e_rocznik").value,
       konkurencje: document.getElementById("e_konkurencje").value
     })
-  }).then(() => { alert("💾 Zapisano"); ukryjWszystko(); });
+  }).then(() => {
+      alert("💾 Zapisano");
+      document.getElementById("edycja").style.display = "none";
+      document.getElementById("zawodnik").style.display = "none";
+  });
 }
 
 function dodaj() {
@@ -174,8 +190,15 @@ function dodaj() {
       rocznik: document.getElementById("rocznik").value,
       konkurencje: document.getElementById("konkurencje").value
     })
-  }).then(() => { alert("Dodano!"); ukryjWszystko(); });
+  })
+  .then(res => res.json())
+  .then(data => {
+      alert("Dodano zawodnika!");
+      document.getElementById("sekcja-nowy").style.display = "none";
+      document.querySelectorAll('#sekcja-nowy input').forEach(i => i.value = "");
+  });
 }
 </script>
+
 </body>
 </html>
