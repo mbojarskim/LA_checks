@@ -1,45 +1,282 @@
 <!DOCTYPE html>
-<html>
+<html lang="pl">
 <head>
-    <title>Test połączenia</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Obsługa Pakietów - Zawody</title>
+    <style>
+        * { box-sizing: border-box; font-family: system-ui, 'Segoe UI', sans-serif; }
+        body { background: #f0f2f5; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .container { max-width: 600px; width: 100%; background: white; border-radius: 32px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); padding: 24px; }
+        h1 { font-size: 1.8rem; margin-top: 0; margin-bottom: 0.5rem; color: #1e293b; }
+        .sub { color: #475569; border-left: 4px solid #3b82f6; padding-left: 12px; margin-bottom: 24px; }
+        .scan-area { background: #f8fafc; border-radius: 24px; padding: 20px; text-align: center; border: 2px dashed #cbd5e1; margin-bottom: 24px; }
+        #reader { width: 100%; max-width: 320px; margin: 12px auto; }
+        button { background: #3b82f6; border: none; color: white; font-weight: 600; padding: 12px 20px; border-radius: 40px; font-size: 1rem; cursor: pointer; margin: 6px; }
+        button.secondary { background: #64748b; }
+        button.warning { background: #f97316; }
+        button.success { background: #10b981; }
+        .card { background: #f1f5f9; border-radius: 24px; padding: 20px; margin: 20px 0; }
+        .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e2e8f0; }
+        .info-label { font-weight: 600; color: #334155; }
+        .info-value { font-weight: 500; color: #0f172a; }
+        .package-status { background: #e6f7e6; border-radius: 40px; padding: 8px 16px; display: inline-block; font-weight: bold; color: #2e7d32; }
+        .package-absent { background: #ffe6e6; color: #c62828; }
+        .edit-group { margin: 16px 0; }
+        input, textarea { width: 100%; padding: 12px; border-radius: 20px; border: 1px solid #cbd5e1; font-size: 1rem; margin-top: 4px; }
+        .flex-btns { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 20px; }
+        .alert { padding: 12px; border-radius: 28px; background: #fee2e2; color: #b91c1c; text-align: center; margin: 16px 0; }
+        .alert-success { background: #e6f7e6; color: #2e7d32; }
+        .debug-info { font-size: 0.7rem; color: #666; margin-top: 10px; padding: 8px; background: #f9f9f9; border-radius: 8px; word-break: break-all; font-family: monospace; }
+        @media (max-width: 500px) { .container { padding: 16px; } }
+    </style>
 </head>
 <body>
-    <h1>Test połączenia z Apps Script</h1>
-    <input type="text" id="testId" placeholder="Wprowadź ID">
-    <button onclick="testConnection()">Testuj</button>
-    <pre id="result"></pre>
+<div class="container" id="app">
+    <h1>📦 Odbiór pakietów</h1>
+    <div class="sub">Zeskanuj kod QR (ID zawodnika)</div>
 
-    <script>
-    // PODMIEŃ NA SWÓJ URL APPS SCRIPT
-    const API_URL = 'https://script.google.com/macros/s/AKfycbxg-Xoj--uMd0WK_IaKJFltd0vQ46YaK5_X0uWlLdyEBLyGhR7uTpKg2C3xb-VP0a-g/exec';
+    <div class="scan-area">
+        <div id="reader" style="width:100%;"></div>
+        <button id="startScanBtn" class="secondary">📷 Uruchom skaner</button>
+        <button id="stopScanBtn" style="display:none;">⏹️ Zatrzymaj</button>
+        <p style="font-size:13px; margin-top:12px;">lub wpisz ID ręcznie:</p>
+        <input type="text" id="manualId" placeholder="np. 123" style="width:70%; display:inline-block;">
+        <button id="manualSearchBtn">🔍 Szukaj</button>
+    </div>
+
+    <div id="resultPanel" style="display:none;">
+        <div class="card">
+            <h3>🏃 Dane zawodnika</h3>
+            <div id="playerInfo"></div>
+            <div id="packageSection"></div>
+            
+            <div class="edit-group">
+                <h4>✏️ Edycja danych</h4>
+                <div class="info-row"><span class="info-label">Imię:</span><input type="text" id="editImie"></div>
+                <div class="info-row"><span class="info-label">Nazwisko:</span><input type="text" id="editNazwisko"></div>
+                <div class="info-row"><span class="info-label">Rocznik:</span><input type="text" id="editRocznik"></div>
+                <div class="info-row"><span class="info-label">Konkurencja 1:</span><input type="text" id="editKonk1"></div>
+                <div class="info-row"><span class="info-label">Konkurencja 2:</span><input type="text" id="editKonk2"></div>
+                <div class="info-row"><span class="info-label">Numer startowy:</span><input type="text" id="editNrStartowy"></div>
+            </div>
+            
+            <div class="flex-btns">
+                <button id="saveEditBtn" class="success">💾 Zapisz zmiany</button>
+                <button id="confirmPackageBtn" class="warning">✅ Potwierdź odbiór pakietu</button>
+                <button id="clearBtn" class="secondary">🗑️ Wyczyść</button>
+            </div>
+        </div>
+    </div>
     
-    async function testConnection() {
-        const id = document.getElementById('testId').value;
-        const resultDiv = document.getElementById('result');
+    <div id="debugPanel" class="debug-info" style="display:none;">
+        <strong>Debug:</strong> <span id="debugMsg">Gotowy</span>
+    </div>
+    
+    <footer>Po zeskanowaniu możesz edytować dane przed odebraniem pakietu.</footer>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+<script>
+    const API_URL = 'https://script.google.com/macros/s/AKfycbzefvaEHEVOSkogq2HjemmOAluIFhVqmnZvmvt1pB8clSlQqcZVyYmFOjZ9jwwL4ZQ9/exec'; // PODMIEŃ!
+    
+    let currentRowIndex = null;
+    let currentPlayerData = null;
+    let html5QrCode = null;
+    
+    const resultPanel = document.getElementById('resultPanel');
+    const playerInfoDiv = document.getElementById('playerInfo');
+    const packageSection = document.getElementById('packageSection');
+    const debugMsg = document.getElementById('debugMsg');
+    const debugPanel = document.getElementById('debugPanel');
+    
+    const editImie = document.getElementById('editImie');
+    const editNazwisko = document.getElementById('editNazwisko');
+    const editRocznik = document.getElementById('editRocznik');
+    const editKonk1 = document.getElementById('editKonk1');
+    const editKonk2 = document.getElementById('editKonk2');
+    const editNrStartowy = document.getElementById('editNrStartowy');
+    
+    function showAlert(msg, isError = true) {
+        const oldAlert = document.querySelector('.alert');
+        if(oldAlert) oldAlert.remove();
+        const alertDiv = document.createElement('div');
+        alertDiv.className = isError ? 'alert' : 'alert alert-success';
+        alertDiv.innerText = msg;
+        document.getElementById('app').insertBefore(alertDiv, resultPanel);
+        setTimeout(() => alertDiv.remove(), 4000);
+    }
+    
+    function setDebug(msg) {
+        debugMsg.innerText = msg;
+        debugPanel.style.display = 'block';
+        console.log(msg);
+    }
+    
+    async function fetchPlayerById(id) {
+        try {
+            setDebug(`Pobieranie ID: ${id}`);
+            const url = `${API_URL}?id=${encodeURIComponent(id)}&t=${Date.now()}`;
+            const response = await fetch(url);
+            const text = await response.text();
+            setDebug(`Odpowiedź: ${text.substring(0, 200)}`);
+            return JSON.parse(text);
+        } catch(err) {
+            setDebug(`Błąd: ${err.message}`);
+            showAlert(`Błąd: ${err.message}`);
+            return null;
+        }
+    }
+    
+    async function updatePlayer(updatesObj) {
+        if(!currentRowIndex) return false;
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rowIndex: currentRowIndex, updates: updatesObj })
+            });
+            const result = await response.json();
+            if(result.success) {
+                showAlert("✅ Zaktualizowano!", false);
+                return true;
+            }
+            return false;
+        } catch(err) {
+            showAlert(`Błąd: ${err.message}`);
+            return false;
+        }
+    }
+    
+    function renderPlayerPanel(dataObj) {
+        const d = dataObj.data;
+        playerInfoDiv.innerHTML = `
+            <div class="info-row"><span class="info-label">ID:</span><span class="info-value">${d.ID || ''}</span></div>
+            <div class="info-row"><span class="info-label">Imię i nazwisko:</span><span class="info-value">${d.Imię || ''} ${d.Nazwisko || ''}</span></div>
+            <div class="info-row"><span class="info-label">Rocznik:</span><span class="info-value">${d.Rocznik || '—'}</span></div>
+            <div class="info-row"><span class="info-label">Konkurencje:</span><span class="info-value">${d.Konkurencja1 || '—'} ${d.Konkurencja2 ? '/ ' + d.Konkurencja2 : ''}</span></div>
+            <div class="info-row"><span class="info-label">Numer startowy:</span><span class="info-value">${d.Nr_startowy || 'Nieprzydzielony'}</span></div>
+        `;
         
-        if (!id) {
-            resultDiv.textContent = 'Wprowadź ID';
+        const isTaken = d.Pakiet_Odebrany === 'TAK';
+        packageSection.innerHTML = `
+            <div class="info-row">
+                <span class="info-label">Status pakietu:</span>
+                <span class="package-status ${isTaken ? '' : 'package-absent'}">${isTaken ? '✅ ODEBRANY' : '❌ NIEODEBRANY'}</span>
+            </div>
+        `;
+        
+        editImie.value = d.Imię || '';
+        editNazwisko.value = d.Nazwisko || '';
+        editRocznik.value = d.Rocznik || '';
+        editKonk1.value = d.Konkurencja1 || '';
+        editKonk2.value = d.Konkurencja2 || '';
+        editNrStartowy.value = d.Nr_startowy || '';
+    }
+    
+    async function handleIdFound(id) {
+        setDebug(`Znaleziono ID: ${id}`);
+        stopScanner();
+        const result = await fetchPlayerById(id);
+        if(result && result.success) {
+            currentRowIndex = result.rowIndex;
+            currentPlayerData = result.data;
+            resultPanel.style.display = 'block';
+            renderPlayerPanel(result);
+            showAlert(`Znaleziono: ${result.data.Imię} ${result.data.Nazwisko}`, false);
+        } else {
+            resultPanel.style.display = 'none';
+            showAlert(result?.error || "Nie znaleziono");
+        }
+    }
+    
+    async function saveEdits() {
+        const updates = {};
+        if(editImie.value !== currentPlayerData?.Imię) updates.Imię = editImie.value;
+        if(editNazwisko.value !== currentPlayerData?.Nazwisko) updates.Nazwisko = editNazwisko.value;
+        if(editRocznik.value !== currentPlayerData?.Rocznik) updates.Rocznik = editRocznik.value;
+        if(editKonk1.value !== currentPlayerData?.Konkurencja1) updates.Konkurencja1 = editKonk1.value;
+        if(editKonk2.value !== currentPlayerData?.Konkurencja2) updates.Konkurencja2 = editKonk2.value;
+        if(editNrStartowy.value !== currentPlayerData?.Nr_startowy) updates.Nr_startowy = editNrStartowy.value;
+        
+        if(Object.keys(updates).length === 0) {
+            showAlert("Brak zmian", false);
             return;
         }
         
-        try {
-            resultDiv.textContent = 'Łączenie...';
-            const url = `${API_URL}?id=${encodeURIComponent(id)}&t=${Date.now()}`;
-            console.log('URL:', url);
-            
-            const response = await fetch(url);
-            console.log('Status:', response.status);
-            
-            const text = await response.text();
-            console.log('Odpowiedź:', text);
-            
-            resultDiv.textContent = text;
-            
-        } catch (error) {
-            console.error('Błąd:', error);
-            resultDiv.textContent = 'Błąd: ' + error.message;
+        if(await updatePlayer(updates) && currentPlayerData?.ID) {
+            const refreshed = await fetchPlayerById(currentPlayerData.ID);
+            if(refreshed?.success) {
+                currentRowIndex = refreshed.rowIndex;
+                currentPlayerData = refreshed.data;
+                renderPlayerPanel(refreshed);
+            }
         }
     }
-    </script>
+    
+    async function confirmPackage() {
+        if(currentPlayerData?.Pakiet_Odebrany === 'TAK') {
+            showAlert("Pakiet już odebrany!", false);
+            return;
+        }
+        if(await updatePlayer({ Pakiet_Odebrany: 'TAK' }) && currentPlayerData?.ID) {
+            const refreshed = await fetchPlayerById(currentPlayerData.ID);
+            if(refreshed?.success) {
+                currentPlayerData = refreshed.data;
+                renderPlayerPanel(refreshed);
+            }
+        }
+    }
+    
+    function clearPanel() {
+        resultPanel.style.display = 'none';
+        currentRowIndex = null;
+        currentPlayerData = null;
+        manualIdInput.value = '';
+    }
+    
+    function startScanner() {
+        if(html5QrCode?.isScanning) return;
+        html5QrCode = new Html5Qrcode("reader");
+        html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 },
+            (text) => handleIdFound(text.trim()),
+            () => {}
+        ).then(() => {
+            startScanBtn.style.display = 'none';
+            stopScanBtn.style.display = 'inline-block';
+        }).catch(err => showAlert("Błąd kamery"));
+    }
+    
+    function stopScanner() {
+        if(html5QrCode?.isScanning) {
+            html5QrCode.stop().then(() => {
+                startScanBtn.style.display = 'inline-block';
+                stopScanBtn.style.display = 'none';
+            });
+        }
+    }
+    
+    const startScanBtn = document.getElementById('startScanBtn');
+    const stopScanBtn = document.getElementById('stopScanBtn');
+    const manualSearchBtn = document.getElementById('manualSearchBtn');
+    const saveEditBtn = document.getElementById('saveEditBtn');
+    const confirmPackageBtn = document.getElementById('confirmPackageBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const manualIdInput = document.getElementById('manualId');
+    
+    startScanBtn.addEventListener('click', startScanner);
+    stopScanBtn.addEventListener('click', stopScanner);
+    manualSearchBtn.addEventListener('click', () => {
+        const id = manualIdInput.value.trim();
+        if(id) handleIdFound(id);
+        else showAlert("Wprowadź ID");
+    });
+    saveEditBtn.addEventListener('click', saveEdits);
+    confirmPackageBtn.addEventListener('click', confirmPackage);
+    clearBtn.addEventListener('click', clearPanel);
+    
+    setDebug('Aplikacja gotowa. URL: ' + API_URL);
+</script>
 </body>
 </html>
