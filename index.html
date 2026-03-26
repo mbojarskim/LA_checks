@@ -35,19 +35,41 @@ input {
   margin:5px;
   font-size:16px;
 }
+ html, body {
+  height: 100%;
+  margin: 0;
+}
+
+#menu {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.tile {
+  flex: 1;              /* każdy przycisk zajmuje 1/3 ekranu */
+  width: 100%;
+  font-size: 32px;
+  border: none;
+  color: white;
+}
+
+.blue { background: #2196F3; }
+.green { background: #4CAF50; }
+.orange { background: #ff9800; } 
 </style>
 </head>
 
 <body>
 
 <h2>📋 Biuro zawodów</h2>
-
+<button onclick="backToMenu()">🏠 MENU</button>
 <!-- 🔎 SEARCH -->
-<!-- <div class="card">-->
-  <!-- <h3>🔎 Szukaj</h3>-->
- <!--  <input id="szukaj" placeholder="Nazwisko">-->
- <!--  <button class="blue" onclick="szukaj()">Szukaj</button>-->
-<!-- </div>-->
+<div class="card">
+  <h3>🔎 Szukaj</h3>
+  <input id="szukaj" placeholder="Nazwisko">
+  <button class="blue" onclick="szukaj()">Szukaj</button>
+</div>
 
 <!-- 📷 SCAN -->
 <button class="blue" onclick="startScan()">📷 Skanuj zawodnika</button>
@@ -102,6 +124,7 @@ function reset() {
 
 // 📷 SCAN
 function startScan() {
+  hideMenu();
   reset();
   scanner = new Html5Qrcode("reader");
 
@@ -229,7 +252,30 @@ function szukaj() {
       document.getElementById("zawodnik").innerHTML = html;
     });
 }
+// Ukrywanie menu
+function hideMenu() {
+  document.getElementById("menu").style.display = "none";
+}
 
+// Pokazanie wynikow  
+function showSearch() {
+  hideMenu();
+
+  document.getElementById("zawodnik").style.display = "block";
+
+  document.getElementById("zawodnik").innerHTML = `
+    <h2>🔎 Szukaj zawodnika</h2>
+    <input id="szukajInput" style="width:90%;font-size:24px;padding:10px;">
+    <button class="tile green" style="flex:0;height:120px;font-size:24px;" onclick="szukaj()">Szukaj</button>
+  `;
+}
+
+// Powrot do Menu  
+function backToMenu() {
+  document.getElementById("menu").style.display = "flex";
+  reset();
+}
+  
 </script>
 
 </body>
