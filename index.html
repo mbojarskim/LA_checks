@@ -2,151 +2,158 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Biuro zawodów</title>
 <script src="https://unpkg.com"></script>
 
 <style>
-  body { font-family: Arial; margin: 0; padding: 0; background: #f2f2f2; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  body { font-family: Arial; text-align: center; background:#f2f2f2; margin:0; padding:10px; }
   
-  /* GÓRA - SKANER */
-  #top-section { flex: 1; background: #000; position: relative; overflow: hidden; display: flex; justify-content: center; align-items: center; }
-  #reader { width: 100%; height: 100%; }
-  #start-overlay { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.8); color: white; display: flex; justify-content: center; align-items: center; z-index: 20; }
+  /* DUŻE PRZYCISKI - jak prosiłeś */
+  .btn-big {
+    width: 100%;
+    padding: 25px;
+    margin: 10px 0;
+    font-size: 22px;
+    font-weight: bold;
+    border: none;
+    border-radius: 15px;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  }
 
-  /* DÓŁ - PANEL */
-  #bottom-section { flex: 1; padding: 15px; overflow-y: auto; background: white; border-top: 3px solid #2196F3; }
+  .green { background:#4CAF50; color:white; }
+  .blue { background:#2196F3; color:white; }
+  .orange { background:#ff9800; color:white; }
+  .gray { background:#757575; color:white; }
 
-  button { width: 100%; padding: 20px; margin-bottom: 10px; font-size: 20px; font-weight: bold; border: none; border-radius: 12px; cursor: pointer; }
-  .blue { background: #2196F3; color: white; }
-  .green { background: #4CAF50; color: white; }
-  .orange { background: #ff9800; color: white; }
-  .gray { background: #757575; color: white; }
-
-  .card { background: #f9f9f9; padding: 15px; border-radius: 12px; margin-bottom: 10px; display: none; border: 1px solid #ddd; }
-  input { width: 100%; padding: 15px; margin: 5px 0; font-size: 18px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
+  .card { background:white; margin:15px 0; padding:20px; border-radius:15px; display: none; }
+  input { width:90%; padding:18px; margin:8px; font-size:18px; border:1px solid #ccc; border-radius:10px; box-sizing: border-box; }
+  
+  /* TWOJE MIEJSCE NA APARAT */
+  #reader { width: 100%; border-radius: 15px; overflow: hidden; background: black; }
 </style>
 </head>
 
 <body>
 
-<div id="top-section">
-  <!-- Nakładka startowa - wymuszona przez politykę prywatności przeglądarek -->
-  <div id="start-overlay">
-    <button class="blue" style="width: 80%;" onclick="inicjujAparat()">🚀 KLIKNIJ, ABY WŁĄCZYĆ APARAT</button>
-  </div>
-  <div id="reader"></div>
+<h2>📋 Biuro zawodów</h2>
+
+<!-- TWOJE TRZY GŁÓWNE PRZYCISKI -->
+<div id="menu">
+  <button class="btn-big blue" onclick="startScan()">📷 SKANUJ ZAWODNIKA</button>
+  <button class="btn-big green" onclick="pokazSekcje('sekcja-nowy')">➕ NOWY ZAWODNIK</button>
+  <button class="btn-big gray" onclick="pokazSekcje('sekcja-szukaj')">🔍 SZUKAJ</button>
 </div>
 
-<div id="bottom-section">
-  
-  <div id="menu-glowne">
-    <button class="green" onclick="pokazSekcje('sekcja-nowy')">➕ NOWY ZAWODNIK</button>
-    <button class="gray" onclick="pokazSekcje('sekcja-szukaj')">🔍 SZUKAJ (DUMMY)</button>
-  </div>
+<!-- KONTENER NA APARAT -->
+<div id="reader"></div>
 
-  <div id="zawodnik" class="card"></div>
+<!-- DANE ZAWODNIKA (PO SKANOWANIU) -->
+<div id="zawodnik" class="card"></div>
 
-  <div id="edycja" class="card">
-    <h3>Edycja zawodnika</h3>
-    <input id="e_imie"> <input id="e_nazwisko"> <input id="e_rocznik"> <input id="e_konkurencje">
-    <button class="green" onclick="zapiszEdycje()">💾 ZAPISZ</button>
-    <button class="gray" onclick="ukryjSekcje()">ANULUJ</button>
-  </div>
+<!-- FORMULARZ EDYCJI -->
+<div id="edycja" class="card">
+  <h3>Edycja zawodnika</h3>
+  <input id="e_imie"> <input id="e_nazwisko"> <input id="e_rocznik"> <input id="e_konkurencje">
+  <button class="btn-big green" onclick="zapiszEdycje()">💾 Zapisz</button>
+  <button class="btn-big gray" onclick="ukryjWszystko()">Anuluj</button>
+</div>
 
-  <div id="sekcja-nowy" class="card">
-    <h3>Dodaj zawodnika</h3>
-    <input id="imie" placeholder="Imię"> <input id="nazwisko" placeholder="Nazwisko"> <input id="rocznik" placeholder="Rocznik"> <input id="konkurencje" placeholder="Konkurencje">
-    <button class="green" onclick="dodaj()">ZAPISZ</button>
-    <button class="gray" onclick="ukryjSekcje()">WSTECZ</button>
-  </div>
+<!-- NOWY ZAWODNIK -->
+<div id="sekcja-nowy" class="card">
+  <h3>➕ Nowy zawodnik</h3>
+  <input id="imie" placeholder="Imię">
+  <input id="nazwisko" placeholder="Nazwisko">
+  <input id="rocznik" placeholder="Rocznik">
+  <input id="konkurencje" placeholder="Konkurencje">
+  <button class="btn-big green" onclick="dodaj()">Dodaj teraz</button>
+  <button class="btn-big gray" onclick="ukryjWszystko()">Wróć</button>
+</div>
 
-  <div id="sekcja-szukaj" class="card">
-    <h3>Wyszukiwarka</h3>
-    <p>Opcja dummy...</p>
-    <button class="gray" onclick="ukryjSekcje()">WSTECZ</button>
-  </div>
-
+<!-- SZUKAJ (DUMMY) -->
+<div id="sekcja-szukaj" class="card">
+  <h3>🔍 Szukaj</h3>
+  <p>Opcja wkrótce dostępna...</p>
+  <button class="btn-big gray" onclick="ukryjWszystko()">Wróć</button>
 </div>
 
 <script>
-const API_URL = "TU_WKLEJ_URL";
+const API_URL = "https://script.google.com/macros/s/AKfycbyCa1bGgo4CarwRp3JjYYwML3SQghse-MvQxEjByvlXj8SLP5eXrPC-NZduQizwLgMx/exec";
 let currentId = null;
 let html5QrCode = null;
 
-async function inicjujAparat() {
-  document.getElementById('start-overlay').style.display = 'none';
-  
+function ukryjWszystko() {
+  document.querySelectorAll('.card').forEach(c => c.style.display = 'none');
+}
+
+function pokazSekcje(id) {
+  ukryjWszystko();
+  if (html5QrCode && html5QrCode.isScanning) {
+     html5QrCode.stop().then(() => {
+         document.getElementById(id).style.display = 'block';
+     });
+  } else {
+     document.getElementById(id).style.display = 'block';
+  }
+}
+
+// TWOJA ORYGINALNA LOGIKA STARTU
+function startScan() {
+  ukryjWszystko();
+  document.getElementById("reader").innerHTML = "";
+
   if (!html5QrCode) {
     html5QrCode = new Html5Qrcode("reader");
   }
 
-  const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-
-  try {
-    await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
-  } catch (err) {
-    alert("Błąd aparatu: " + err);
-    document.getElementById('start-overlay').style.display = 'flex';
-  }
+  html5QrCode.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: 250 },
+    onScanSuccess
+  ).catch(err => alert("Błąd aparatu: " + err));
 }
 
 function onScanSuccess(id) {
-  // Nie wyłączamy aparatu, tylko pobieramy dane
-  fetch(API_URL + "?id=" + id)
-    .then(res => res.text())
-    .then(text => {
-      if (text === "NOT_FOUND") { alert("Nie znaleziono!"); return; }
-      const d = JSON.parse(text);
-      currentId = d.id;
-      
-      ukryjSekcje();
-      const z = document.getElementById("zawodnik");
-      z.style.display = "block";
-      z.innerHTML = `
-        <h2 style="margin:5px">${d.imie} ${d.nazwisko}</h2>
-        <p>Nr: <b>${d.nr_startowy || "-"}</b></p>
-        <button class="green" onclick="checkin()">✔ WYDAJ PAKIET</button>
-        <button class="orange" onclick="pokazEdycje()">✏️ EDYTUJ</button>
-      `;
-      document.getElementById("e_imie").value = d.imie;
-      document.getElementById("e_nazwisko").value = d.nazwisko;
-      document.getElementById("e_rocznik").value = d.rocznik;
-      document.getElementById("e_konkurencje").value = d.konkurencje;
-    });
-}
+  html5QrCode.stop().then(() => {
+    fetch(API_URL + "?id=" + id)
+      .then(res => res.text())
+      .then(text => {
+        if (text === "NOT_FOUND") { alert("Nie znaleziono"); return; }
+        const d = JSON.parse(text);
+        currentId = d.id;
 
-function pokazSekcje(id) {
-  ukryjSekcje();
-  document.getElementById(id).style.display = 'block';
-  document.getElementById('menu-glowne').style.display = 'none';
-}
-
-function ukryjSekcje() {
-  document.querySelectorAll('.card').forEach(c => c.style.display = 'none');
-  document.getElementById('menu-glowne').style.display = 'block';
-}
-
-function pokazEdycje() {
-  document.getElementById('edycja').style.display = 'block';
+        const z = document.getElementById("zawodnik");
+        z.style.display = "block";
+        z.innerHTML = `
+          <h3>${d.imie} ${d.nazwisko}</h3>
+          Nr: ${d.nr_startowy || "-"}<br><br>
+          <button class="btn-big green" onclick="checkin()">✔ WYDAJ PAKIET</button>
+          <button class="btn-big orange" onclick="document.getElementById('edycja').style.display='block'">✏️ EDYTUJ</button>
+        `;
+        document.getElementById("e_imie").value = d.imie;
+        document.getElementById("e_nazwisko").value = d.nazwisko;
+        document.getElementById("e_rocznik").value = d.rocznik;
+        document.getElementById("e_konkurencje").value = d.konkurencje;
+      });
+  });
 }
 
 function checkin() {
   fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "checkin", id: currentId }) })
-  .then(() => { alert("✅ Pakiet wydany"); ukryjSekcje(); });
+  .then(() => { alert("✅ Wydano"); ukryjWszystko(); });
 }
 
 function zapiszEdycje() {
   fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "edit", id: currentId, imie: document.getElementById("e_imie").value, nazwisko: document.getElementById("e_nazwisko").value, rocznik: document.getElementById("e_rocznik").value, konkurencje: document.getElementById("e_konkurencje").value }) })
-  .then(() => { alert("💾 Zapisano"); ukryjSekcje(); });
+  .then(() => { alert("💾 Zapisano"); ukryjWszystko(); });
 }
 
 function dodaj() {
   fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "add", imie: document.getElementById("imie").value, nazwisko: document.getElementById("nazwisko").value, rocznik: document.getElementById("rocznik").value, konkurencje: document.getElementById("konkurencje").value }) })
   .then(res => res.json())
-  .then(data => { alert("Dodano!"); ukryjSekcje(); });
+  .then(data => { alert("Dodano!"); ukryjWszystko(); });
 }
 </script>
-
 </body>
 </html>
