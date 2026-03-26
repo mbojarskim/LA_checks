@@ -11,11 +11,14 @@
         h1 { font-size: 1.8rem; margin-top: 0; margin-bottom: 0.5rem; color: #1e293b; }
         .sub { color: #475569; border-left: 4px solid #3b82f6; padding-left: 12px; margin-bottom: 24px; }
         .scan-area { background: #f8fafc; border-radius: 24px; padding: 20px; text-align: center; border: 2px dashed #cbd5e1; margin-bottom: 24px; }
-        #reader { width: 100%; max-width: 320px; margin: 12px auto; }
-        button { background: #3b82f6; border: none; color: white; font-weight: 600; padding: 12px 20px; border-radius: 40px; font-size: 1rem; cursor: pointer; margin: 6px; }
+        #reader { width: 100%; max-width: 400px; margin: 12px auto; min-height: 300px; background: #000; border-radius: 16px; overflow: hidden; }
+        #reader video { width: 100% !important; height: auto !important; }
+        button { background: #3b82f6; border: none; color: white; font-weight: 600; padding: 12px 20px; border-radius: 40px; font-size: 1rem; cursor: pointer; margin: 6px; transition: 0.2s; }
+        button:hover { opacity: 0.9; transform: scale(0.98); }
         button.secondary { background: #64748b; }
         button.warning { background: #f97316; }
         button.success { background: #10b981; }
+        button.danger { background: #ef4444; }
         .card { background: #f1f5f9; border-radius: 24px; padding: 20px; margin: 20px 0; }
         .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e2e8f0; }
         .info-label { font-weight: 600; color: #334155; }
@@ -27,22 +30,26 @@
         .flex-btns { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 20px; }
         .alert { padding: 12px; border-radius: 28px; background: #fee2e2; color: #b91c1c; text-align: center; margin: 16px 0; }
         .alert-success { background: #e6f7e6; color: #2e7d32; }
-        .debug-info { font-size: 0.7rem; color: #666; margin-top: 10px; padding: 8px; background: #f9f9f9; border-radius: 8px; word-break: break-all; font-family: monospace; }
+        .debug-info { font-size: 0.7rem; color: #666; margin-top: 10px; padding: 8px; background: #f9f9f9; border-radius: 8px; word-break: break-all; font-family: monospace; max-height: 100px; overflow-y: auto; }
         @media (max-width: 500px) { .container { padding: 16px; } }
     </style>
 </head>
 <body>
 <div class="container" id="app">
-    <h1>📦 Odbiór pakietów</h1>
+    <h1>📦 Odbiór pakietów 2.0</h1>
     <div class="sub">Zeskanuj kod QR (ID zawodnika)</div>
 
     <div class="scan-area">
-        <div id="reader" style="width:100%;"></div>
-        <button id="startScanBtn" class="secondary">📷 Uruchom skaner</button>
-        <button id="stopScanBtn" style="display:none;">⏹️ Zatrzymaj</button>
+        <div id="reader"></div>
+        <div style="margin-top: 12px;">
+            <button id="startScanBtn" class="secondary">📷 Uruchom skaner</button>
+            <button id="stopScanBtn" style="display:none;" class="danger">⏹️ Zatrzymaj</button>
+        </div>
         <p style="font-size:13px; margin-top:12px;">lub wpisz ID ręcznie:</p>
-        <input type="text" id="manualId" placeholder="np. 123" style="width:70%; display:inline-block;">
-        <button id="manualSearchBtn">🔍 Szukaj</button>
+        <div style="display: flex; gap: 8px;">
+            <input type="text" id="manualId" placeholder="np. 123" style="flex: 1;">
+            <button id="manualSearchBtn">🔍 Szukaj</button>
+        </div>
     </div>
 
     <div id="resultPanel" style="display:none;">
@@ -69,34 +76,48 @@
         </div>
     </div>
     
-    <div id="debugPanel" class="debug-info" style="display:none;">
+    <div id="debugPanel" class="debug-info">
         <strong>Debug:</strong> <span id="debugMsg">Gotowy</span>
     </div>
     
-    <footer>Po zeskanowaniu możesz edytować dane przed odebraniem pakietu.</footer>
+    <footer style="font-size: 0.7rem; text-align: center; margin-top: 16px; color: #666;">
+        Skieruj aparat na kod QR
+    </footer>
 </div>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
 <script>
+    // ==================== KONFIGURACJA ====================
     const API_URL = 'https://script.google.com/macros/s/AKfycbzefvaEHEVOSkogq2HjemmOAluIFhVqmnZvmvt1pB8clSlQqcZVyYmFOjZ9jwwL4ZQ9/exec'; // PODMIEŃ!
     
     let currentRowIndex = null;
     let currentPlayerData = null;
     let html5QrCode = null;
+    let isScanning = false;
     
+    // Elementy DOM
     const resultPanel = document.getElementById('resultPanel');
     const playerInfoDiv = document.getElementById('playerInfo');
     const packageSection = document.getElementById('packageSection');
     const debugMsg = document.getElementById('debugMsg');
-    const debugPanel = document.getElementById('debugPanel');
     
+    // Pola edycji
     const editImie = document.getElementById('editImie');
     const editNazwisko = document.getElementById('editNazwisko');
     const editRocznik = document.getElementById('editRocznik');
     const editKonk1 = document.getElementById('editKonk1');
     const editKonk2 = document.getElementById('editKonk2');
     const editNrStartowy = document.getElementById('editNrStartowy');
+    
+    // Przyciski
+    const startScanBtn = document.getElementById('startScanBtn');
+    const stopScanBtn = document.getElementById('stopScanBtn');
+    const manualSearchBtn = document.getElementById('manualSearchBtn');
+    const saveEditBtn = document.getElementById('saveEditBtn');
+    const confirmPackageBtn = document.getElementById('confirmPackageBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const manualIdInput = document.getElementById('manualId');
     
     function showAlert(msg, isError = true) {
         const oldAlert = document.querySelector('.alert');
@@ -109,8 +130,11 @@
     }
     
     function setDebug(msg) {
-        debugMsg.innerText = msg;
-        debugPanel.style.display = 'block';
+        const timestamp = new Date().toLocaleTimeString();
+        debugMsg.innerHTML = `[${timestamp}] ${msg}<br>${debugMsg.innerHTML}`;
+        if(debugMsg.innerHTML.split('<br>').length > 10) {
+            debugMsg.innerHTML = debugMsg.innerHTML.split('<br>').slice(0, 10).join('<br>');
+        }
         console.log(msg);
     }
     
@@ -120,10 +144,10 @@
             const url = `${API_URL}?id=${encodeURIComponent(id)}&t=${Date.now()}`;
             const response = await fetch(url);
             const text = await response.text();
-            setDebug(`Odpowiedź: ${text.substring(0, 200)}`);
+            setDebug(`Odpowiedź: ${text.substring(0, 150)}`);
             return JSON.parse(text);
         } catch(err) {
-            setDebug(`Błąd: ${err.message}`);
+            setDebug(`Błąd fetch: ${err.message}`);
             showAlert(`Błąd: ${err.message}`);
             return null;
         }
@@ -132,6 +156,7 @@
     async function updatePlayer(updatesObj) {
         if(!currentRowIndex) return false;
         try {
+            setDebug(`Aktualizacja: ${JSON.stringify(updatesObj)}`);
             const response = await fetch(API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -144,6 +169,7 @@
             }
             return false;
         } catch(err) {
+            setDebug(`Błąd aktualizacji: ${err.message}`);
             showAlert(`Błąd: ${err.message}`);
             return false;
         }
@@ -176,8 +202,9 @@
     }
     
     async function handleIdFound(id) {
-        setDebug(`Znaleziono ID: ${id}`);
+        setDebug(`✨ Zeskanowano ID: ${id}`);
         stopScanner();
+        
         const result = await fetchPlayerById(id);
         if(result && result.success) {
             currentRowIndex = result.rowIndex;
@@ -185,9 +212,12 @@
             resultPanel.style.display = 'block';
             renderPlayerPanel(result);
             showAlert(`Znaleziono: ${result.data.Imię} ${result.data.Nazwisko}`, false);
+            setDebug(`✅ Zawodnik: ${result.data.Imię} ${result.data.Nazwisko}`);
         } else {
             resultPanel.style.display = 'none';
-            showAlert(result?.error || "Nie znaleziono");
+            const errorMsg = result?.error || "Nie znaleziono zawodnika";
+            showAlert(errorMsg);
+            setDebug(`❌ ${errorMsg}`);
         }
     }
     
@@ -216,6 +246,10 @@
     }
     
     async function confirmPackage() {
+        if(!currentRowIndex) {
+            showAlert("Nie ma aktywnego zawodnika");
+            return;
+        }
         if(currentPlayerData?.Pakiet_Odebrany === 'TAK') {
             showAlert("Pakiet już odebrany!", false);
             return;
@@ -234,49 +268,112 @@
         currentRowIndex = null;
         currentPlayerData = null;
         manualIdInput.value = '';
+        setDebug('Panel wyczyszczony');
     }
     
-    function startScanner() {
-        if(html5QrCode?.isScanning) return;
+    // ==================== SKANER ====================
+    async function startScanner() {
+        if (isScanning) {
+            setDebug('Skaner już działa');
+            return;
+        }
+        
+        setDebug('Uruchamianie skanera...');
+        
+        // Sprawdź czy przeglądarka wspiera kamerkę
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            showAlert('Twoja przeglądarka nie wspiera kamery');
+            setDebug('❌ Brak wsparcia dla kamery');
+            return;
+        }
+        
+        const readerElement = document.getElementById('reader');
+        
+        // Wyczyść poprzedni skaner
+        if (html5QrCode) {
+            try {
+                await html5QrCode.stop();
+            } catch(e) {}
+            html5QrCode = null;
+        }
+        
+        // Utwórz nowy skaner
         html5QrCode = new Html5Qrcode("reader");
-        html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 },
-            (text) => handleIdFound(text.trim()),
-            () => {}
-        ).then(() => {
+        
+        const config = {
+            fps: 15,
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1.0,
+            disableFlip: false
+        };
+        
+        try {
+            await html5QrCode.start(
+                { facingMode: "environment" },
+                config,
+                (decodedText) => {
+                    setDebug(`📷 Zeskanowano: ${decodedText}`);
+                    handleIdFound(decodedText.trim());
+                },
+                (errorMessage) => {
+                    // Ignoruj błędy podczas skanowania
+                    if (errorMessage && !errorMessage.includes("No MultiFormat")) {
+                        setDebug(`Skanowanie: ${errorMessage.substring(0, 50)}`);
+                    }
+                }
+            );
+            
+            isScanning = true;
             startScanBtn.style.display = 'none';
             stopScanBtn.style.display = 'inline-block';
-        }).catch(err => showAlert("Błąd kamery"));
-    }
-    
-    function stopScanner() {
-        if(html5QrCode?.isScanning) {
-            html5QrCode.stop().then(() => {
-                startScanBtn.style.display = 'inline-block';
-                stopScanBtn.style.display = 'none';
-            });
+            setDebug('✅ Skaner uruchomiony, szukam kodu QR...');
+            
+        } catch (err) {
+            setDebug(`❌ Błąd uruchomienia: ${err}`);
+            showAlert('Nie można uruchomić kamery. Sprawdź uprawnienia.');
+            console.error(err);
         }
     }
     
-    const startScanBtn = document.getElementById('startScanBtn');
-    const stopScanBtn = document.getElementById('stopScanBtn');
-    const manualSearchBtn = document.getElementById('manualSearchBtn');
-    const saveEditBtn = document.getElementById('saveEditBtn');
-    const confirmPackageBtn = document.getElementById('confirmPackageBtn');
-    const clearBtn = document.getElementById('clearBtn');
-    const manualIdInput = document.getElementById('manualId');
+    async function stopScanner() {
+        if (html5QrCode && isScanning) {
+            try {
+                await html5QrCode.stop();
+                setDebug('Skaner zatrzymany');
+            } catch(e) {
+                setDebug(`Błąd zatrzymania: ${e}`);
+            }
+            isScanning = false;
+        }
+        startScanBtn.style.display = 'inline-block';
+        stopScanBtn.style.display = 'none';
+    }
     
+    // Event listeners
     startScanBtn.addEventListener('click', startScanner);
     stopScanBtn.addEventListener('click', stopScanner);
     manualSearchBtn.addEventListener('click', () => {
         const id = manualIdInput.value.trim();
-        if(id) handleIdFound(id);
-        else showAlert("Wprowadź ID");
+        if(id) {
+            stopScanner();
+            handleIdFound(id);
+        } else {
+            showAlert("Wprowadź ID");
+        }
     });
     saveEditBtn.addEventListener('click', saveEdits);
     confirmPackageBtn.addEventListener('click', confirmPackage);
     clearBtn.addEventListener('click', clearPanel);
     
-    setDebug('Aplikacja gotowa. URL: ' + API_URL);
+    // Sprawdź czy URL jest poprawny
+    if (API_URL === 'https://script.google.com/macros/s/TWOJ_URL/exec') {
+        showAlert('⚠️ Pamiętaj o podmianie API_URL na właściwy adres skryptu!', true);
+        setDebug('⚠️ URL API nie został skonfigurowany!');
+    } else {
+        setDebug(`✅ API_URL: ${API_URL.substring(0, 50)}...`);
+    }
+    
+    setDebug('Aplikacja gotowa. Kliknij "Uruchom skaner"');
 </script>
 </body>
 </html>
