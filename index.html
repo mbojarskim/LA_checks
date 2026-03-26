@@ -30,13 +30,13 @@
         .flex-btns { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 20px; }
         .alert { padding: 12px; border-radius: 28px; background: #fee2e2; color: #b91c1c; text-align: center; margin: 16px 0; }
         .alert-success { background: #e6f7e6; color: #2e7d32; }
-        .debug-info { font-size: 0.7rem; color: #666; margin-top: 10px; padding: 8px; background: #f9f9f9; border-radius: 8px; word-break: break-all; font-family: monospace; max-height: 100px; overflow-y: auto; }
+        .debug-info { font-size: 0.7rem; color: #666; margin-top: 10px; padding: 8px; background: #f9f9f9; border-radius: 8px; word-break: break-all; font-family: monospace; max-height: 150px; overflow-y: auto; }
         @media (max-width: 500px) { .container { padding: 16px; } }
     </style>
 </head>
 <body>
 <div class="container" id="app">
-    <h1>📦 Odbiór pakietów 2.0</h1>
+    <h1>📦 Odbiór pakietów</h1>
     <div class="sub">Zeskanuj kod QR (ID zawodnika)</div>
 
     <div class="scan-area">
@@ -88,8 +88,7 @@
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
 <script>
-    // ==================== KONFIGURACJA ====================
-    const API_URL = 'https://script.google.com/macros/s/AKfycbzefvaEHEVOSkogq2HjemmOAluIFhVqmnZvmvt1pB8clSlQqcZVyYmFOjZ9jwwL4ZQ9/exec'; // PODMIEŃ!
+    const API_URL = 'https://script.google.com/macros/s/TWOJ_URL/exec'; // PODMIEŃ!
     
     let currentRowIndex = null;
     let currentPlayerData = null;
@@ -102,7 +101,6 @@
     const packageSection = document.getElementById('packageSection');
     const debugMsg = document.getElementById('debugMsg');
     
-    // Pola edycji
     const editImie = document.getElementById('editImie');
     const editNazwisko = document.getElementById('editNazwisko');
     const editRocznik = document.getElementById('editRocznik');
@@ -110,7 +108,6 @@
     const editKonk2 = document.getElementById('editKonk2');
     const editNrStartowy = document.getElementById('editNrStartowy');
     
-    // Przyciski
     const startScanBtn = document.getElementById('startScanBtn');
     const stopScanBtn = document.getElementById('stopScanBtn');
     const manualSearchBtn = document.getElementById('manualSearchBtn');
@@ -132,8 +129,8 @@
     function setDebug(msg) {
         const timestamp = new Date().toLocaleTimeString();
         debugMsg.innerHTML = `[${timestamp}] ${msg}<br>${debugMsg.innerHTML}`;
-        if(debugMsg.innerHTML.split('<br>').length > 10) {
-            debugMsg.innerHTML = debugMsg.innerHTML.split('<br>').slice(0, 10).join('<br>');
+        if(debugMsg.innerHTML.split('<br>').length > 15) {
+            debugMsg.innerHTML = debugMsg.innerHTML.split('<br>').slice(0, 15).join('<br>');
         }
         console.log(msg);
     }
@@ -153,45 +150,33 @@
         }
     }
     
-        async function updatePlayer(updatesObj) {
+    // Funkcja do wysyłania aktualizacji - używamy GET z parametrami (omija CORS)
+    async function updatePlayerViaGet(updatesObj) {
         if(!currentRowIndex) {
             setDebug('❌ Brak currentRowIndex');
             return false;
         }
         
         try {
-            setDebug(`📤 Wysyłam aktualizację: ${JSON.stringify(updatesObj)}`);
-            setDebug(`📍 Wiersz: ${currentRowIndex}`);
+            // Przygotuj parametry do wysłania przez GET
+            const params = new URLSearchParams();
+            params.append('rowIndex', currentRowIndex);
             
-            const payload = { 
-                rowIndex: currentRowIndex, 
-                updates: updatesObj 
-            };
-            
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                mode: 'cors',
-                headers: { 
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload)
-            });
-            
-            setDebug(`📥 Status odpowiedzi: ${response.status}`);
-            
-            const text = await response.text();
-            setDebug(`📄 Odpowiedź surowa: ${text}`);
-            
-            let result;
-            try {
-                result = JSON.parse(text);
-            } catch(e) {
-                setDebug(`❌ Błąd parsowania JSON: ${e}`);
-                throw new Error('Nieprawidłowa odpowiedź z serwera');
+            for (let [key, value] of Object.entries(updatesObj)) {
+                params.append(key, value);
             }
             
+            const url = `${API_URL}?${params.toString()}&method=update&t=${Date.now()}`;
+            setDebug(`📤 URL: ${url.substring(0, 150)}...`);
+            
+            const response = await fetch(url);
+            const text = await response.text();
+            setDebug(`📥 Odpowiedź: ${text}`);
+            
+            const result = JSON.parse(text);
+            
             if(result.success) {
-                setDebug(`✅ Aktualizacja udana: ${result.message || ''}`);
+                setDebug(`✅ Aktualizacja udana`);
                 showAlert("✅ Zaktualizowano dane!", false);
                 return true;
             } else {
@@ -201,8 +186,8 @@
             }
             
         } catch(err) {
-            setDebug(`❌ Błąd fetch: ${err.message}`);
-            showAlert(`Błąd połączenia: ${err.message}`);
+            setDebug(`❌ Błąd: ${err.message}`);
+            showAlert(`Błąd: ${err.message}`);
             return false;
         }
     }
@@ -244,7 +229,7 @@
             resultPanel.style.display = 'block';
             renderPlayerPanel(result);
             showAlert(`Znaleziono: ${result.data.Imię} ${result.data.Nazwisko}`, false);
-            setDebug(`✅ Zawodnik: ${result.data.Imię} ${result.data.Nazwisko}`);
+            setDebug(`✅ Zawodnik w wierszu ${currentRowIndex}`);
         } else {
             resultPanel.style.display = 'none';
             const errorMsg = result?.error || "Nie znaleziono zawodnika";
@@ -254,6 +239,11 @@
     }
     
     async function saveEdits() {
+        if(!currentRowIndex) {
+            showAlert("Brak załadowanego zawodnika");
+            return;
+        }
+        
         const updates = {};
         if(editImie.value !== currentPlayerData?.Imię) updates.Imię = editImie.value;
         if(editNazwisko.value !== currentPlayerData?.Nazwisko) updates.Nazwisko = editNazwisko.value;
@@ -267,7 +257,9 @@
             return;
         }
         
-        if(await updatePlayer(updates) && currentPlayerData?.ID) {
+        setDebug(`Zapisywanie zmian: ${JSON.stringify(updates)}`);
+        
+        if(await updatePlayerViaGet(updates) && currentPlayerData?.ID) {
             const refreshed = await fetchPlayerById(currentPlayerData.ID);
             if(refreshed?.success) {
                 currentRowIndex = refreshed.rowIndex;
@@ -286,7 +278,10 @@
             showAlert("Pakiet już odebrany!", false);
             return;
         }
-        if(await updatePlayer({ Pakiet_Odebrany: 'TAK' }) && currentPlayerData?.ID) {
+        
+        setDebug(`Potwierdzanie odbioru pakietu dla wiersza ${currentRowIndex}`);
+        
+        if(await updatePlayerViaGet({ Pakiet_Odebrany: 'TAK' }) && currentPlayerData?.ID) {
             const refreshed = await fetchPlayerById(currentPlayerData.ID);
             if(refreshed?.success) {
                 currentPlayerData = refreshed.data;
@@ -305,80 +300,47 @@
     
     // ==================== SKANER ====================
     async function startScanner() {
-        if (isScanning) {
-            setDebug('Skaner już działa');
-            return;
-        }
+        if (isScanning) return;
         
         setDebug('Uruchamianie skanera...');
         
-        // Sprawdź czy przeglądarka wspiera kamerkę
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             showAlert('Twoja przeglądarka nie wspiera kamery');
-            setDebug('❌ Brak wsparcia dla kamery');
             return;
         }
         
-        const readerElement = document.getElementById('reader');
-        
-        // Wyczyść poprzedni skaner
         if (html5QrCode) {
-            try {
-                await html5QrCode.stop();
-            } catch(e) {}
+            try { await html5QrCode.stop(); } catch(e) {}
             html5QrCode = null;
         }
         
-        // Utwórz nowy skaner
         html5QrCode = new Html5Qrcode("reader");
-        
-        const config = {
-            fps: 15,
-            qrbox: { width: 250, height: 250 },
-            aspectRatio: 1.0,
-            disableFlip: false
-        };
         
         try {
             await html5QrCode.start(
                 { facingMode: "environment" },
-                config,
-                (decodedText) => {
-                    setDebug(`📷 Zeskanowano: ${decodedText}`);
-                    handleIdFound(decodedText.trim());
-                },
-                (errorMessage) => {
-                    // Ignoruj błędy podczas skanowania
-                    if (errorMessage && !errorMessage.includes("No MultiFormat")) {
-                        setDebug(`Skanowanie: ${errorMessage.substring(0, 50)}`);
-                    }
-                }
+                { fps: 15, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+                (decodedText) => handleIdFound(decodedText.trim()),
+                () => {}
             );
-            
             isScanning = true;
             startScanBtn.style.display = 'none';
             stopScanBtn.style.display = 'inline-block';
-            setDebug('✅ Skaner uruchomiony, szukam kodu QR...');
-            
+            setDebug('✅ Skaner uruchomiony');
         } catch (err) {
-            setDebug(`❌ Błąd uruchomienia: ${err}`);
-            showAlert('Nie można uruchomić kamery. Sprawdź uprawnienia.');
-            console.error(err);
+            setDebug(`❌ Błąd: ${err}`);
+            showAlert('Nie można uruchomić kamery');
         }
     }
     
     async function stopScanner() {
         if (html5QrCode && isScanning) {
-            try {
-                await html5QrCode.stop();
-                setDebug('Skaner zatrzymany');
-            } catch(e) {
-                setDebug(`Błąd zatrzymania: ${e}`);
-            }
+            try { await html5QrCode.stop(); } catch(e) {}
             isScanning = false;
         }
         startScanBtn.style.display = 'inline-block';
         stopScanBtn.style.display = 'none';
+        setDebug('Skaner zatrzymany');
     }
     
     // Event listeners
@@ -397,10 +359,8 @@
     confirmPackageBtn.addEventListener('click', confirmPackage);
     clearBtn.addEventListener('click', clearPanel);
     
-    // Sprawdź czy URL jest poprawny
     if (API_URL === 'https://script.google.com/macros/s/TWOJ_URL/exec') {
-        showAlert('⚠️ Pamiętaj o podmianie API_URL na właściwy adres skryptu!', true);
-        setDebug('⚠️ URL API nie został skonfigurowany!');
+        showAlert('⚠️ Pamiętaj o podmianie API_URL!', true);
     } else {
         setDebug(`✅ API_URL: ${API_URL.substring(0, 50)}...`);
     }
