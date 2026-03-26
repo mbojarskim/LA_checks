@@ -113,16 +113,39 @@ function backToMenu() {
 }
 
 // SKANOWANIE
-function startScanner() {
+async function startScanner() {
+    // 1. Jeśli skaner już istnieje, spróbuj go zatrzymać i wyczyścić
+    if (html5QrCode) {
+        try {
+            await html5QrCode.stop();
+        } catch (e) {
+            // Ignoruj błąd jeśli nie był uruchomiony
+        }
+        document.getElementById("reader").innerHTML = ""; // Czyścimy kontener
+    }
+
+    // 2. Tworzymy nową instancję
     html5QrCode = new Html5Qrcode("reader");
+
+    // 3. Uruchamiamy
     html5QrCode.start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
+        { 
+            fps: 10, 
+            qrbox: { width: 250, height: 250 } // Nowy format zapisu boxa
+        },
         (decodedText) => {
-            html5QrCode.stop();
-            pobierzDane(decodedText);
+            html5QrCode.stop().then(() => {
+                pobierzDane(decodedText);
+            });
+        },
+        (errorMessage) => {
+            // Opcjonalne: logowanie błędów w konsoli (nie alertować, bo sypie nimi co klatkę)
+            console.log("Skanowanie...");
         }
-    ).catch(err => alert("Błąd kamery: " + err));
+    ).catch(err => {
+        alert("Błąd: Upewnij się, że używasz HTTPS i dałeś dostęp do kamery. " + err);
+    });
 }
 
 // POBIERANIE DANYCH
