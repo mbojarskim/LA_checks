@@ -50,12 +50,10 @@
             border: 2px dashed #cbd5e1;
             margin-bottom: 24px;
         }
-        video, #preview {
+        #reader {
             width: 100%;
             max-width: 320px;
-            border-radius: 20px;
             margin: 12px auto;
-            background: #000;
         }
         button {
             background: #3b82f6;
@@ -82,6 +80,9 @@
         }
         button.success {
             background: #10b981;
+        }
+        button.danger {
+            background: #ef4444;
         }
         .card {
             background: #f1f5f9;
@@ -141,6 +142,10 @@
             text-align: center;
             margin: 16px 0;
         }
+        .alert-success {
+            background: #e6f7e6;
+            color: #2e7d32;
+        }
         hr {
             margin: 20px 0;
         }
@@ -150,6 +155,15 @@
             color: #94a3b8;
             margin-top: 28px;
         }
+        .debug-info {
+            font-size: 0.7rem;
+            color: #666;
+            margin-top: 10px;
+            padding: 8px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            word-break: break-all;
+        }
         @media (max-width: 500px) {
             .container { padding: 16px; }
         }
@@ -157,7 +171,7 @@
 </head>
 <body>
 <div class="container" id="app">
-    <h1>📦 Odbiór pakietów</h1>
+    <h1>📦 Odbiór pakietów 2.0</h1>
     <div class="sub">Zeskanuj kod QR (ID zawodnika)</div>
 
     <div class="scan-area">
@@ -177,7 +191,7 @@
             <div id="packageSection"></div>
             
             <div class="edit-group">
-                <h4>✏️ Edycja danych (przed odbiorem)</h4>
+                <h4>✏️ Edycja danych</h4>
                 <div class="info-row">
                     <span class="info-label">Imię:</span>
                     <input type="text" id="editImie" placeholder="Imię">
@@ -203,10 +217,15 @@
             <div class="flex-btns">
                 <button id="saveEditBtn" class="success">💾 Zapisz zmiany</button>
                 <button id="confirmPackageBtn" class="warning">✅ Potwierdź odbiór pakietu</button>
-                <button id="clearBtn" class="secondary">🗑️ Wyczyść / nowe wyszukanie</button>
+                <button id="clearBtn" class="secondary">🗑️ Wyczyść</button>
             </div>
         </div>
     </div>
+    
+    <div id="debugPanel" class="debug-info" style="display:none;">
+        <strong>Debug:</strong> <span id="debugMsg">Gotowy</span>
+    </div>
+    
     <footer>Po zeskanowaniu możesz edytować dane przed odebraniem pakietu.</footer>
 </div>
 
@@ -218,14 +237,16 @@
     // 🔁 ZMIEŃ TEN URL NA ADRES TWOJEGO WDROŻONEGO SKRYPTU APPS SCRIPT
     const API_URL = 'https://script.google.com/macros/s/AKfycbyCa1bGgo4CarwRp3JjYYwML3SQghse-MvQxEjByvlXj8SLP5eXrPC-NZduQizwLgMx/exec'; // <-- WKLEJ SWÓJ URL
     
-    let currentRowIndex = null;      // numer wiersza w sheets (1-indexed)
-    let currentPlayerData = null;    // przechowuje obiekt z danymi
+    let currentRowIndex = null;
+    let currentPlayerData = null;
     let html5QrCode = null;
     
     // Elementy DOM
     const resultPanel = document.getElementById('resultPanel');
     const playerInfoDiv = document.getElementById('playerInfo');
     const packageSection = document.getElementById('packageSection');
+    const debugPanel = document.getElementById('debugPanel');
+    const debugMsg = document.getElementById('debugMsg');
     
     // Pola edycji
     const editImie = document.getElementById('editImie');
@@ -243,31 +264,57 @@
     const clearBtn = document.getElementById('clearBtn');
     const manualIdInput = document.getElementById('manualId');
     
-    // ==================== FUNKCJE POMOCNICZE ====================
+    // Funkcje pomocnicze
     function showAlert(msg, isError = true) {
         const oldAlert = document.querySelector('.alert');
         if(oldAlert) oldAlert.remove();
         const alertDiv = document.createElement('div');
-        alertDiv.className = 'alert';
+        alertDiv.className = isError ? 'alert' : 'alert alert-success';
         alertDiv.innerText = msg;
         document.getElementById('app').insertBefore(alertDiv, resultPanel);
         setTimeout(() => alertDiv.remove(), 4000);
     }
     
+    function setDebug(msg) {
+        debugMsg.innerText = msg;
+        debugPanel.style.display = 'block';
+        console.log(msg);
+    }
+    
     // Pobieranie danych z arkusza po ID
     async function fetchPlayerById(id) {
         try {
-            const url = `${API_URL}?id=${encodeURIComponent(id)}`;
+            setDebug(`Pobieranie danych dla ID: ${id}`);
+            const url = `${API_URL}?id=${encodeURIComponent(id)}&t=${Date.now()}`;
+            setDebug(`URL: ${url}`);
+            
             const response = await fetch(url);
-            const data = await response.json();
+            setDebug(`Status odpowiedzi: ${response.status}`);
+            
+            const text = await response.text();
+            setDebug(`Odpowiedź surowa: ${text.substring(0, 200)}`);
+            
+            const data = JSON.parse(text);
+            
             if(data.error) {
                 showAlert(data.error);
+                setDebug(`Błąd: ${data.error}`);
                 return null;
             }
-            return data; // { rowIndex, data: { Imię, Nazwisko, ... } }
+            
+            if(!data.success) {
+                showAlert("Nieprawidłowa odpowiedź z serwera");
+                setDebug(`Nieprawidłowa odpowiedź: ${JSON.stringify(data)}`);
+                return null;
+            }
+            
+            setDebug(`Pobrano dane: ${JSON.stringify(data.data)}`);
+            return data;
+            
         } catch(err) {
             console.error(err);
-            showAlert("Błąd połączenia z serwerem");
+            setDebug(`Błąd: ${err.toString()}`);
+            showAlert(`Błąd połączenia: ${err.message}`);
             return null;
         }
     }
@@ -278,23 +325,41 @@
             showAlert("Nie wczytano danych zawodnika");
             return false;
         }
+        
         try {
+            setDebug(`Aktualizacja wiersza ${currentRowIndex}: ${JSON.stringify(updatesObj)}`);
+            
             const payload = {
                 rowIndex: currentRowIndex,
                 updates: updatesObj
             };
+            
             const response = await fetch(API_URL, {
                 method: 'POST',
-                mode: 'no-cors', // uwaga: w trybie no-cors nie dostajemy odpowiedzi JSON, ale zapis zadziała
-                headers: { 'Content-Type': 'application/json' },
+                mode: 'cors',
+                headers: { 
+                    'Content-Type': 'application/json',
+                },
                 body: JSON.stringify(payload)
             });
-            // Ze względu na no-cors nie możemy odczytać odpowiedzi, ale zakładamy sukces
-            showAlert("✅ Zaktualizowano dane!", false);
-            return true;
+            
+            const text = await response.text();
+            setDebug(`Odpowiedź aktualizacji: ${text}`);
+            
+            const data = JSON.parse(text);
+            
+            if(data.success) {
+                showAlert("✅ Zaktualizowano dane!", false);
+                return true;
+            } else {
+                showAlert(`Błąd aktualizacji: ${data.error || 'Nieznany błąd'}`);
+                return false;
+            }
+            
         } catch(err) {
             console.error(err);
-            showAlert("Błąd aktualizacji");
+            setDebug(`Błąd aktualizacji: ${err.toString()}`);
+            showAlert(`Błąd aktualizacji: ${err.message}`);
             return false;
         }
     }
@@ -302,12 +367,15 @@
     // Renderowanie danych w panelu
     function renderPlayerPanel(dataObj) {
         const d = dataObj.data;
-        // Wyświetlenie podstawowych informacji
+        
         let konkurencjeHtml = '';
         const konk1 = d.Konkurencja1 || '—';
         const konk2 = d.Konkurencja2 || '—';
-        if(konk1 === '—' && konk2 === '—') konkurencjeHtml = '<span style="color:gray;">Nie startuje w żadnej konkurencji</span>';
-        else konkurencjeHtml = `${konk1} ${konk2 !== '—' ? ' / ' + konk2 : ''}`;
+        if((konk1 === '—' || konk1 === '') && (konk2 === '—' || konk2 === '')) {
+            konkurencjeHtml = '<span style="color:gray;">Nie startuje w żadnej konkurencji</span>';
+        } else {
+            konkurencjeHtml = `${konk1} ${konk2 && konk2 !== '—' ? ' / ' + konk2 : ''}`;
+        }
         
         const startNumber = d.Nr_startowy || 'Nieprzydzielony';
         
@@ -319,67 +387,69 @@
             <div class="info-row"><span class="info-label">Numer startowy:</span><span class="info-value">${startNumber}</span></div>
         `;
         
-        // Pakiet odebrany?
         const isTaken = d.Pakiet_Odebrany === 'TAK';
         packageSection.innerHTML = `
             <div class="info-row">
                 <span class="info-label">Status pakietu:</span>
                 <span class="package-status ${isTaken ? '' : 'package-absent'}">${isTaken ? '✅ ODEBRANY' : '❌ NIEODEBRANY'}</span>
             </div>
-            ${isTaken ? '<p style="color:green; margin-top:8px;">✔️ Pakiet został już wcześniej odebrany. Możesz edytować dane lub odświeżyć.</p>' : ''}
+            ${isTaken ? '<p style="color:green; margin-top:8px;">✔️ Pakiet został już wcześniej odebrany.</p>' : ''}
         `;
         
-        // Wypełnij pola edycji aktualnymi danymi
         editImie.value = d.Imię || '';
         editNazwisko.value = d.Nazwisko || '';
         editNrStartowy.value = d.Nr_startowy || '';
         editKonk1.value = d.Konkurencja1 || '';
         editKonk2.value = d.Konkurencja2 || '';
-        
-        // Jeśli pakiet już odebrany, można tylko edytować, przycisk odbioru nie robi nic (ale też można dać komunikat)
-        if(isTaken) {
-            confirmPackageBtn.disabled = false; // można kliknąć, ale sprawdzimy w funkcji
-            confirmPackageBtn.style.opacity = '0.7';
-        } else {
-            confirmPackageBtn.disabled = false;
-            confirmPackageBtn.style.opacity = '1';
-        }
     }
     
     // Główna funkcja po znalezieniu ID
     async function handleIdFound(id) {
+        setDebug(`Znaleziono ID: ${id}`);
         stopScanner();
+        
         const result = await fetchPlayerById(id);
-        if(result && result.data) {
+        
+        if(result && result.success && result.data) {
             currentRowIndex = result.rowIndex;
             currentPlayerData = result.data;
             resultPanel.style.display = 'block';
             renderPlayerPanel(result);
+            showAlert(`Znaleziono zawodnika: ${result.data.Imię} ${result.data.Nazwisko}`, false);
         } else {
             resultPanel.style.display = 'none';
             currentRowIndex = null;
+            currentPlayerData = null;
+            if(result && result.error) {
+                showAlert(result.error);
+            }
         }
     }
     
-    // Zapis zmian (edycja)
+    // Zapis zmian
     async function saveEdits() {
         if(!currentRowIndex) {
             showAlert("Brak załadowanego zawodnika");
             return;
         }
-        const updates = {
-            Imię: editImie.value,
-            Nazwisko: editNazwisko.value,
-            Nr_startowy: editNrStartowy.value,
-            Konkurencja1: editKonk1.value,
-            Konkurencja2: editKonk2.value
-        };
-        await updatePlayer(updates);
-        // Odśwież dane po zapisie
-        const id = currentPlayerData?.ID;
-        if(id) {
-            const refreshed = await fetchPlayerById(id);
-            if(refreshed && refreshed.data) {
+        
+        const updates = {};
+        if(editImie.value !== currentPlayerData?.Imię) updates.Imię = editImie.value;
+        if(editNazwisko.value !== currentPlayerData?.Nazwisko) updates.Nazwisko = editNazwisko.value;
+        if(editNrStartowy.value !== currentPlayerData?.Nr_startowy) updates.Nr_startowy = editNrStartowy.value;
+        if(editKonk1.value !== currentPlayerData?.Konkurencja1) updates.Konkurencja1 = editKonk1.value;
+        if(editKonk2.value !== currentPlayerData?.Konkurencja2) updates.Konkurencja2 = editKonk2.value;
+        
+        if(Object.keys(updates).length === 0) {
+            showAlert("Brak zmian do zapisania", false);
+            return;
+        }
+        
+        const success = await updatePlayer(updates);
+        
+        if(success && currentPlayerData?.ID) {
+            const refreshed = await fetchPlayerById(currentPlayerData.ID);
+            if(refreshed && refreshed.success) {
                 currentRowIndex = refreshed.rowIndex;
                 currentPlayerData = refreshed.data;
                 renderPlayerPanel(refreshed);
@@ -393,19 +463,17 @@
             showAlert("Nie ma aktywnego zawodnika");
             return;
         }
-        // Sprawdź aktualny stan pakietu
-        const isAlreadyTaken = currentPlayerData?.Pakiet_Odebrany === 'TAK';
-        if(isAlreadyTaken) {
-            showAlert("Pakiet był już oznaczony jako odebrany! Jeśli chcesz zmienić, użyj edycji (ale zazwyczaj pakietu nie cofa się).", false);
+        
+        if(currentPlayerData?.Pakiet_Odebrany === 'TAK') {
+            showAlert("Pakiet był już oznaczony jako odebrany!", false);
             return;
         }
-        const updates = { Pakiet_Odebrany: 'TAK' };
-        await updatePlayer(updates);
-        // Odśwież dane
-        const id = currentPlayerData?.ID;
-        if(id) {
-            const refreshed = await fetchPlayerById(id);
-            if(refreshed && refreshed.data) {
+        
+        const success = await updatePlayer({ Pakiet_Odebrany: 'TAK' });
+        
+        if(success && currentPlayerData?.ID) {
+            const refreshed = await fetchPlayerById(currentPlayerData.ID);
+            if(refreshed && refreshed.success) {
                 currentRowIndex = refreshed.rowIndex;
                 currentPlayerData = refreshed.data;
                 renderPlayerPanel(refreshed);
@@ -419,33 +487,44 @@
         currentRowIndex = null;
         currentPlayerData = null;
         manualIdInput.value = '';
+        setDebug('Panel wyczyszczony');
     }
     
     // ==================== SKANER KODÓW QR ====================
     function startScanner() {
-        if(html5QrCode) {
-            html5QrCode.stop().then(() => {
-                startNewScanner();
-            }).catch(() => startNewScanner());
-        } else {
-            startNewScanner();
+        if(html5QrCode && html5QrCode.isScanning) {
+            return;
         }
-    }
-    
-    function startNewScanner() {
+        
         html5QrCode = new Html5Qrcode("reader");
-        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-        html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
-            // Sukces
-            handleIdFound(decodedText.trim());
-        }, (error) => {
-            // ignoruj błędy odczytu
+        const config = { 
+            fps: 10, 
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1.0
+        };
+        
+        html5QrCode.start(
+            { facingMode: "environment" }, 
+            config, 
+            (decodedText) => {
+                setDebug(`Zeskanowano: ${decodedText}`);
+                handleIdFound(decodedText.trim());
+            }, 
+            (error) => {
+                // Ignoruj błędy odczytu
+                if (error && !error.includes("No MultiFormat Readers")) {
+                    setDebug(`Błąd skanowania: ${error}`);
+                }
+            }
+        ).then(() => {
+            startScanBtn.style.display = 'none';
+            stopScanBtn.style.display = 'inline-block';
+            setDebug('Skaner uruchomiony');
         }).catch(err => {
             console.warn("Błąd kamery: ", err);
-            showAlert("Nie udało się uruchomić kamery. Sprawdź uprawnienia.");
+            setDebug(`Błąd kamery: ${err}`);
+            showAlert("Nie udało się uruchomić kamery. Sprawdź uprawnienia i czy używasz HTTPS.");
         });
-        startScanBtn.style.display = 'none';
-        stopScanBtn.style.display = 'inline-block';
     }
     
     function stopScanner() {
@@ -453,7 +532,12 @@
             html5QrCode.stop().then(() => {
                 startScanBtn.style.display = 'inline-block';
                 stopScanBtn.style.display = 'none';
-            }).catch(() => {});
+                setDebug('Skaner zatrzymany');
+            }).catch(err => {
+                setDebug(`Błąd zatrzymania: ${err}`);
+                startScanBtn.style.display = 'inline-block';
+                stopScanBtn.style.display = 'none';
+            });
         } else {
             startScanBtn.style.display = 'inline-block';
             stopScanBtn.style.display = 'none';
@@ -476,14 +560,19 @@
     confirmPackageBtn.addEventListener('click', confirmPackage);
     clearBtn.addEventListener('click', clearPanel);
     
-    // Ewentualne automatyczne zamknięcie skanera przy rozładowaniu strony
+    // Test połączenia przy starcie
+    window.addEventListener('load', () => {
+        setDebug('Aplikacja załadowana. URL API: ' + API_URL);
+        if(API_URL === 'https://script.google.com/macros/s/AKfycbxxxxxx/exec') {
+            showAlert('⚠️ Pamiętaj o podmianie API_URL na właściwy adres skryptu Apps Script!', true);
+        }
+    });
+    
     window.addEventListener('beforeunload', () => {
         if(html5QrCode && html5QrCode.isScanning) {
             html5QrCode.stop();
         }
     });
-    
-    console.log("Aplikacja gotowa, podmień API_URL na swój endpoint Apps Script");
 </script>
 </body>
 </html>
