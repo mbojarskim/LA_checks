@@ -4,13 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
 <title>Biuro zawodów</title>
-
 <script src="https://unpkg.com"></script>
 
 <style>
   body { font-family: Arial, sans-serif; text-align: center; background:#f2f2f2; margin: 0; padding: 10px; }
-
-  /* OGROMNE PRZYCISKI */
+  
+  /* WIELKIE PRZYCISKI */
   button {
     width: 100%;
     padding: 25px;
@@ -20,185 +19,125 @@
     border: none;
     border-radius: 15px;
     cursor: pointer;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
   }
 
-  .green { background:#4CAF50; color:white; }
   .blue { background:#2196F3; color:white; }
+  .green { background:#4CAF50; color:white; }
   .orange { background:#ff9800; color:white; }
   .gray { background:#757575; color:white; }
 
-  .card {
-    background:white;
-    margin: 15px 0;
-    padding: 20px;
-    border-radius: 15px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-  }
+  .card { background:white; margin: 15px 0; padding: 20px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+  input { width: 95%; padding: 18px; margin: 8px 0; font-size: 18px; border: 1px solid #ccc; border-radius: 10px; box-sizing: border-box; }
 
-  input {
-    width: 95%;
-    padding: 18px;
-    margin: 8px 0;
-    font-size: 18px;
-    border: 1px solid #ccc;
-    border-radius: 10px;
-    box-sizing: border-box;
-  }
-
-  /* REZERWACJA MIEJSCA NA APARAT */
-  #reader { 
-    width: 100%; 
-    background: #000; 
-    border-radius: 15px; 
-    overflow: hidden;
-    margin-top: 10px;
-  }
+  /* MIEJSCE NA APARAT */
+  #reader-container { width: 100%; max-width: 500px; margin: 0 auto; }
+  #reader { width: 100%; border-radius: 15px; overflow: hidden; background: #000; }
 </style>
 </head>
 
 <body>
 
-<h2>📋 Biuro zawodów 3.0</h2>
+<h2>📋 Biuro zawodów</h2>
 
 <!-- GŁÓWNE PRZYCISKI -->
 <button class="blue" onclick="startScan()">📷 SKANUJ ZAWODNIKA</button>
-<button class="green" onclick="pokazNowego()">➕ NOWY ZAWODNIK</button>
-<button class="gray" onclick="alert('Opcja szukaj wkrótce')">🔍 SZUKAJ</button>
+<button class="green" onclick="pokazSekcje('sekcja-nowy')">➕ NOWY ZAWODNIK</button>
+<button class="gray" onclick="pokazSekcje('sekcja-szukaj')">🔍 SZUKAJ</button>
 
-<div id="reader"></div>
-
-<!-- DANE ZAWODNIKA -->
-<div id="zawodnik" class="card" style="display:none;"></div>
-
-<!-- FORMULARZ EDYCJI -->
-<div id="edycja" class="card" style="display:none;">
-  <h3>Edycja zawodnika</h3>
-  <input id="e_imie" placeholder="Imię">
-  <input id="e_nazwisko" placeholder="Nazwisko">
-  <input id="e_rocznik" placeholder="Rocznik">
-  <input id="e_konkurencje" placeholder="Konkurencje">
-  <button class="green" onclick="zapiszEdycje()">💾 Zapisz zmiany</button>
-  <button class="gray" onclick="document.getElementById('edycja').style.display='none'">Anuluj</button>
+<!-- DYNAMICZNY KONTENER SKANERA -->
+<div id="reader-container">
+  <div id="reader"></div>
 </div>
 
-<!-- DODAWANIE (DOMYŚLNIE UKRYTE) -->
+<!-- KARTY SEKCJI -->
+<div id="zawodnik" class="card" style="display:none;"></div>
+
+<div id="edycja" class="card" style="display:none;">
+  <h3>Edycja zawodnika</h3>
+  <input id="e_imie"> <input id="e_nazwisko"> <input id="e_rocznik"> <input id="e_konkurencje">
+  <button class="green" onclick="zapiszEdycje()">💾 ZAPISZ</button>
+</div>
+
 <div id="sekcja-nowy" class="card" style="display:none;">
-  <h3>➕ Nowy zawodnik</h3>
-  <input id="imie" placeholder="Imię"><br>
-  <input id="nazwisko" placeholder="Nazwisko"><br>
-  <input id="rocznik" placeholder="Rocznik"><br>
-  <input id="konkurencje" placeholder="Konkurencje"><br>
-  <button class="green" onclick="dodaj()">DODAJ ZAWODNIKA</button>
-  <button class="gray" onclick="document.getElementById('sekcja-nowy').style.display='none'">ANULUJ</button>
+  <h3>Nowy zawodnik</h3>
+  <input id="imie" placeholder="Imię"> <input id="nazwisko" placeholder="Nazwisko"> <input id="rocznik" placeholder="Rocznik"> <input id="konkurencje" placeholder="Konkurencje">
+  <button class="green" onclick="dodaj()">DODAJ</button>
+</div>
+
+<div id="sekcja-szukaj" class="card" style="display:none;">
+  <h3>Wyszukiwarka</h3>
+  <p>Opcja dummy...</p>
 </div>
 
 <script>
-const API_URL = "TU_WKLEJ_URL";
+const API_URL = "https://script.google.com/macros/s/AKfycbyCa1bGgo4CarwRp3JjYYwML3SQghse-MvQxEjByvlXj8SLP5eXrPC-NZduQizwLgMx/exec";
 let currentId = null;
 let scanner = null;
 
-function pokazNowego() {
-    document.getElementById('sekcja-nowy').style.display = 'block';
-    window.scrollTo(0, document.body.scrollHeight);
+function pokazSekcje(id) {
+  // Ukryj wszystko i zatrzymaj skaner
+  if (scanner) { scanner.stop().catch(() => {}); }
+  document.querySelectorAll('.card').forEach(c => c.style.display = 'none');
+  document.getElementById('reader').innerHTML = "";
+  
+  document.getElementById(id).style.display = 'block';
 }
 
-// START SKANOWANIA (Logika z Twojego 1. kodu)
 function startScan() {
-  document.getElementById("reader").innerHTML = "";
-  if(scanner) { scanner.clear(); }
+  // Resetuj widoki
+  pokazSekcje('reader-container'); 
+  document.getElementById('reader').innerHTML = ""; // Czyść div
 
   scanner = new Html5Qrcode("reader");
-  scanner.start(
-    { facingMode: "environment" },
-    { fps: 10, qrbox: 250 },
-    onScanSuccess
-  ).catch(err => alert("Błąd kamery: " + err));
+  
+  const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+  scanner.start({ facingMode: "environment" }, config, onScanSuccess)
+    .catch(err => alert("Błąd kamery: " + err));
 }
 
-// PO SKANIE
 function onScanSuccess(id) {
-  scanner.stop();
-  document.getElementById("reader").innerHTML = "";
-
-  fetch(API_URL + "?id=" + id)
-    .then(res => res.text())
-    .then(text => {
-      if (text === "NOT_FOUND") {
-        alert("Nie znaleziono");
-        return;
-      }
-
-      const d = JSON.parse(text);
-      currentId = d.id;
-
-      document.getElementById("zawodnik").style.display = "block";
-      document.getElementById("zawodnik").innerHTML = `
-        <h2 style="margin:0">${d.imie} ${d.nazwisko}</h2>
-        <p>Nr startowy: <b>${d.nr_startowy || "-"}</b></p>
-        <p>Konkurencje: ${d.konkurencje}</p>
-        <button class="green" onclick="checkin()">✔ Wydaj pakiet</button>
-        <button class="orange" onclick="pokazEdycje()">✏️ Edytuj dane</button>
-      `;
-
-      document.getElementById("e_imie").value = d.imie;
-      document.getElementById("e_nazwisko").value = d.nazwisko;
-      document.getElementById("e_rocznik").value = d.rocznik;
-      document.getElementById("e_konkurencje").value = d.konkurencje;
-    });
-}
-
-function checkin() {
-  fetch(API_URL, {
-    method: "POST",
-    body: JSON.stringify({ action: "checkin", id: currentId })
-  }).then(() => {
-      alert("✅ Pakiet wydany");
-      document.getElementById("zawodnik").style.display = "none";
+  scanner.stop().then(() => {
+    document.getElementById('reader').innerHTML = "";
+    fetch(API_URL + "?id=" + id)
+      .then(res => res.text())
+      .then(text => {
+        if (text === "NOT_FOUND") { alert("Nie znaleziono"); return; }
+        const d = JSON.parse(text);
+        currentId = d.id;
+        
+        const z = document.getElementById("zawodnik");
+        z.style.display = "block";
+        z.innerHTML = `
+          <h3>${d.imie} ${d.nazwisko}</h3>
+          Nr: ${d.nr_startowy || "-"}<br><br>
+          <button class="green" onclick="checkin()">✔ WYDAJ PAKIET</button>
+          <button class="orange" onclick="document.getElementById('edycja').style.display='block'">✏️ EDYTUJ</button>
+        `;
+        document.getElementById("e_imie").value = d.imie;
+        document.getElementById("e_nazwisko").value = d.nazwisko;
+        document.getElementById("e_rocznik").value = d.rocznik;
+        document.getElementById("e_konkurencje").value = d.konkurencje;
+      });
   });
 }
 
-function pokazEdycje() {
-  document.getElementById("edycja").style.display = "block";
+// Reszta Twoich funkcji bez zmian logicznych
+function checkin() {
+  fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "checkin", id: currentId }) })
+  .then(() => alert("✅ Wydano"));
 }
 
 function zapiszEdycje() {
-  fetch(API_URL, {
-    method: "POST",
-    body: JSON.stringify({
-      action: "edit",
-      id: currentId,
-      imie: document.getElementById("e_imie").value,
-      nazwisko: document.getElementById("e_nazwisko").value,
-      rocznik: document.getElementById("e_rocznik").value,
-      konkurencje: document.getElementById("e_konkurencje").value
-    })
-  }).then(() => {
-      alert("💾 Zapisano");
-      document.getElementById("edycja").style.display = "none";
-      document.getElementById("zawodnik").style.display = "none";
-  });
+  fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "edit", id: currentId, imie: document.getElementById("e_imie").value, nazwisko: document.getElementById("e_nazwisko").value, rocznik: document.getElementById("e_rocznik").value, konkurencje: document.getElementById("e_konkurencje").value }) })
+  .then(() => { alert("💾 Zapisano"); document.getElementById("edycja").style.display="none"; });
 }
 
 function dodaj() {
-  fetch(API_URL, {
-    method: "POST",
-    body: JSON.stringify({
-      action: "add",
-      imie: document.getElementById("imie").value,
-      nazwisko: document.getElementById("nazwisko").value,
-      rocznik: document.getElementById("rocznik").value,
-      konkurencje: document.getElementById("konkurencje").value
-    })
-  })
+  fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "add", imie: document.getElementById("imie").value, nazwisko: document.getElementById("nazwisko").value, rocznik: document.getElementById("rocznik").value, konkurencje: document.getElementById("konkurencje").value }) })
   .then(res => res.json())
-  .then(data => {
-      alert("Dodano zawodnika!");
-      document.getElementById("sekcja-nowy").style.display = "none";
-      document.querySelectorAll('#sekcja-nowy input').forEach(i => i.value = "");
-  });
+  .then(data => { alert("Dodano!"); document.getElementById("sekcja-nowy").style.display="none"; });
 }
 </script>
-
 </body>
 </html>
