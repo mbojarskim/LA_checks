@@ -1,69 +1,155 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Skaner QR</title>
-  <script src="https://unpkg.com/html5-qrcode"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+<title>Biuro zawodów</title>
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+  body { font-family: Arial, sans-serif; text-align: center; background:#f2f2f2; margin: 0; padding: 10px; }
+  
+  /* APARAT NA GÓRZE - ZAWSZE AKTYWNY */
+  #reader { width: 100%; max-width: 400px; margin: 0 auto; border-radius: 15px; overflow: hidden; background: black; }
+
+  /* DUŻE PRZYCISKI */
+  .btn-big {
+    width: 100%;
+    padding: 22px;
+    margin: 10px 0;
+    font-size: 20px;
+    font-weight: bold;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  }
+
+  .blue { background:#2196F3; color:white; }
+  .green { background:#4CAF50; color:white; }
+  .orange { background:#ff9800; color:white; }
+  .gray { background:#757575; color:white; }
+
+  .card { background:white; margin: 15px 0; padding: 20px; border-radius: 15px; display: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+  input { width: 95%; padding: 15px; margin: 8px 0; font-size: 18px; border: 1px solid #ccc; border-radius: 10px; box-sizing: border-box; }
+</style>
 </head>
 
 <body>
 
-<h2>Skaner QR</h2>
+<h2>📋 Biuro zawodów</h2>
 
-<div id="reader" style="width:300px;"></div>
+<!-- APARAT STARTUJE OD RAZU -->
+<div id="reader"></div>
 
-<div id="result" style="margin-top:20px;"></div>
+<!-- WYNIK SKANOWANIA (POJAWIA SIĘ TUŻ POD APARATEM) -->
+<div id="zawodnik" class="card"></div>
+
+<!-- MENU GŁÓWNE -->
+<div id="menu">
+  <button class="btn-big green" onclick="pokazSekcje('sekcja-nowy')">➕ NOWY ZAWODNIK</button>
+  <button class="btn-big blue" onclick="pokazSekcje('sekcja-szukaj')">🔍 SZUKAJ</button>
+</div>
+
+<!-- SEKCJA: EDYCJA -->
+<div id="edycja" class="card">
+  <h3>✏️ Edycja zawodnika</h3>
+  <input id="e_imie"> <input id="e_nazwisko"> <input id="e_rocznik"> <input id="e_konkurencje">
+  <button class="btn-big green" onclick="zapiszEdycje()">💾 ZAPISZ ZMIANY</button>
+  <button class="btn-big gray" onclick="ukryjSekcje()">ANULUJ</button>
+</div>
+
+<!-- SEKCJA: NOWY ZAWODNIK -->
+<div id="sekcja-nowy" class="card">
+  <h3>➕ Dodaj nowego</h3>
+  <input id="imie" placeholder="Imię">
+  <input id="nazwisko" placeholder="Nazwisko">
+  <input id="rocznik" placeholder="Rocznik">
+  <input id="konkurencje" placeholder="Konkurencje">
+  <button class="btn-big green" onclick="dodaj()">ZAPISZ</button>
+  <button class="btn-big gray" onclick="ukryjSekcje()">WSTECZ</button>
+</div>
+
+<!-- SEKCJA: SZUKAJ -->
+<div id="sekcja-szukaj" class="card">
+  <h3>🔍 Wyszukiwarka</h3>
+  <p>Opcja wkrótce dostępna...</p>
+  <button class="btn-big gray" onclick="ukryjSekcje()">WSTECZ</button>
+</div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbyCa1bGgo4CarwRp3JjYYwML3SQghse-MvQxEjByvlXj8SLP5eXrPC-NZduQizwLgMx/exec";
+const API_URL = "TU_WKLEJ_URL";
+let currentId = null;
 
-function showData(data) {
-  let html = `
-    <p><b>${data.imie} ${data.nazwisko}</b></p>
-    <p>Nr startowy: ${data.nr}</p>
-    <p>Konkurencje: ${data.konkurencja1 || "-"}, ${data.konkurencja2 || "-"}</p>
-    <p>Status: ${data.pakiet || "NIE"}</p>
-  `;
-
-  if (data.pakiet === "TAK") {
-    html += `<p style="color:red;">Pakiet już odebrany</p>`;
-  } else {
-    html += `<button onclick="odbierz(${data.row})">Odbierz pakiet</button>`;
-  }
-
-  document.getElementById("result").innerHTML = html;
-}
-
-function odbierz(row) {
-  fetch(API_URL, {
-    method: "POST",
-    body: JSON.stringify({row: row})
-  })
-  .then(r => r.json())
-  .then(() => {
-    alert("Zapisano!");
-    document.getElementById("result").innerHTML = "";
-  });
-}
-
-function onScanSuccess(decodedText) {
-  fetch(API_URL + "?id=" + decodedText)
-    .then(r => r.json())
-    .then(data => {
-      if (data.found) {
-        showData(data);
-      } else {
-        document.getElementById("result").innerHTML = "Nie znaleziono";
-      }
-    });
-}
-
+// INICJALIZACJA APARATU - OD RAZU PRZY STARTOWANIU STRONY
 const html5QrCode = new Html5Qrcode("reader");
 html5QrCode.start(
   { facingMode: "environment" },
   { fps: 10, qrbox: 250 },
   onScanSuccess
-);
+).catch(err => alert("Błąd aparatu: " + err));
+
+function onScanSuccess(id) {
+  // Nie stopujemy aparatu, żeby biuro działało płynnie
+  fetch(API_URL + "?id=" + id)
+    .then(res => res.text())
+    .then(text => {
+      if (text === "NOT_FOUND") { alert("Nie znaleziono!"); return; }
+      const d = JSON.parse(text);
+      currentId = d.id;
+
+      ukryjSekcje();
+      const z = document.getElementById("zawodnik");
+      z.style.display = "block";
+      z.innerHTML = `
+        <h2 style="margin:5px">${d.imie} ${d.nazwisko}</h2>
+        <p>Nr: <b>${d.nr_startowy || "-"}</b> | Rocznik: ${d.rocznik}</p>
+        <button class="btn-big green" onclick="checkin()">✔ WYDAJ PAKIET</button>
+        <button class="btn-big orange" onclick="pokazEdycje()">✏️ EDYTUJ DANE</button>
+      `;
+
+      document.getElementById("e_imie").value = d.imie;
+      document.getElementById("e_nazwisko").value = d.nazwisko;
+      document.getElementById("e_rocznik").value = d.rocznik;
+      document.getElementById("e_konkurencje").value = d.konkurencje;
+    });
+}
+
+function pokazSekcje(id) {
+  ukryjSekcje();
+  document.getElementById(id).style.display = 'block';
+  document.getElementById('menu').style.display = 'none';
+}
+
+function ukryjSekcje() {
+  document.querySelectorAll('.card').forEach(c => c.style.display = 'none');
+  document.getElementById('menu').style.display = 'block';
+}
+
+function pokazEdycje() {
+  document.getElementById('edycja').style.display = 'block';
+  document.getElementById('zawodnik').style.display = 'none';
+}
+
+function checkin() {
+  fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "checkin", id: currentId }) })
+  .then(() => { alert("✅ Pakiet wydany"); ukryjSekcje(); });
+}
+
+function zapiszEdycje() {
+  fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "edit", id: currentId, imie: document.getElementById("e_imie").value, nazwisko: document.getElementById("e_nazwisko").value, rocznik: document.getElementById("e_rocznik").value, konkurencje: document.getElementById("e_konkurencje").value }) })
+  .then(() => { alert("💾 Zapisano"); ukryjSekcje(); });
+}
+
+function dodaj() {
+  fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "add", imie: document.getElementById("imie").value, nazwisko: document.getElementById("nazwisko").value, rocznik: document.getElementById("rocznik").value, konkurencje: document.getElementById("konkurencje").value }) })
+  .then(res => res.json())
+  .then(data => { 
+    alert("Dodano zawodnika!"); 
+    ukryjSekcje(); 
+    document.querySelectorAll('#sekcja-nowy input').forEach(i => i.value = "");
+  });
+}
 </script>
 
 </body>
