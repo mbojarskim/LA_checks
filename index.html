@@ -21,7 +21,12 @@
         .tile { flex: 1; font-size: 24px; font-weight: bold; border-radius: 0; margin: 0; }
         
         #app-content { display: none; padding-top: 10px; }
-        #reader { width: 100%; max-width: 400px; background: #000; }
+        #reader {
+            width: 100% !important;
+            min-height: 300px;
+            background: #000;
+            margin-top: 10px;
+        }
         .status-badge { font-weight: bold; padding: 5px 10px; border-radius: 5px; }
     </style>
 </head>
@@ -114,38 +119,37 @@ function backToMenu() {
 
 // SKANOWANIE
 async function startScanner() {
-    // 1. Jeśli skaner już istnieje, spróbuj go zatrzymać i wyczyścić
-    if (html5QrCode) {
-        try {
-            await html5QrCode.stop();
-        } catch (e) {
-            // Ignoruj błąd jeśli nie był uruchomiony
+    // Ukrywamy profil i wyniki, pokazujemy kontener skanera
+    document.getElementById("sec-scan").style.display = "block";
+    document.getElementById("profil-zawodnika").style.display = "none";
+    document.getElementById("wyniki-kontener").style.display = "none";
+
+    try {
+        // Jeśli skaner już działał, zatrzymaj go
+        if (html5QrCode) {
+            await html5QrCode.stop().catch(() => {});
         }
-        document.getElementById("reader").innerHTML = ""; // Czyścimy kontener
+        
+        // Stwórz nową instancję w elemencie o id "reader"
+        html5QrCode = new Html5Qrcode("reader");
+
+        await html5QrCode.start(
+            { facingMode: "environment" }, // Tylna kamera
+            {
+                fps: 10,
+                qrbox: { width: 250, height: 250 }
+            },
+            (decodedText) => {
+                // Sukces: zatrzymaj kamerę i pobierz dane
+                html5QrCode.stop().then(() => {
+                    pobierzDane(decodedText);
+                });
+            }
+        );
+    } catch (err) {
+        alert("BŁĄD STARTU: " + err);
+        console.error(err);
     }
-
-    // 2. Tworzymy nową instancję
-    html5QrCode = new Html5Qrcode("reader");
-
-    // 3. Uruchamiamy
-    html5QrCode.start(
-        { facingMode: "environment" },
-        { 
-            fps: 10, 
-            qrbox: { width: 250, height: 250 } // Nowy format zapisu boxa
-        },
-        (decodedText) => {
-            html5QrCode.stop().then(() => {
-                pobierzDane(decodedText);
-            });
-        },
-        (errorMessage) => {
-            // Opcjonalne: logowanie błędów w konsoli (nie alertować, bo sypie nimi co klatkę)
-            console.log("Skanowanie...");
-        }
-    ).catch(err => {
-        alert("Błąd: Upewnij się, że używasz HTTPS i dałeś dostęp do kamery. " + err);
-    });
 }
 
 // POBIERANIE DANYCH
