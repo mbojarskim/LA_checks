@@ -7,19 +7,19 @@
 <script src="https://unpkg.com"></script>
 
 <style>
-  body { font-family: Arial, sans-serif; text-align: center; background:#f2f2f2; margin: 0; padding: 15px; }
+  body { font-family: sans-serif; text-align: center; background:#f2f2f2; margin: 0; padding: 15px; }
   
-  /* DUŻE PRZYCISKI MENU */
+  /* DUŻE PRZYCISKI */
   .btn-big {
     width: 100%;
-    padding: 25px;
+    padding: 22px;
     margin: 10px 0;
-    font-size: 22px;
+    font-size: 20px;
     font-weight: bold;
     border: none;
-    border-radius: 15px;
+    border-radius: 12px;
     cursor: pointer;
-    display: block;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
   }
 
   .blue { background:#2196F3; color:white; }
@@ -32,8 +32,8 @@
     margin: 15px 0;
     padding: 20px;
     border-radius: 15px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    display: none; /* Domyślnie ukryte */
+    display: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   }
 
   input {
@@ -43,34 +43,48 @@
     font-size: 18px;
     border: 1px solid #ccc;
     border-radius: 8px;
+    box-sizing: border-box;
   }
 
-  #reader { width: 100%; margin-top: 10px; border-radius: 10px; overflow: hidden; }
+  /* KONTENER SKANERA */
+  #reader { 
+    width: 100%; 
+    max-width: 500px; 
+    margin: 10px auto; 
+    background: #eee; 
+    border-radius: 10px;
+    min-height: 250px; /* Rezerwuje miejsce, by skaner "miał gdzie wejść" */
+  }
 </style>
 </head>
 
 <body>
 
-<h2>📋 Biuro zawodów 2.0</h2>
+<h2>📋 Biuro zawodów</h2>
 
-<!-- GŁÓWNE PRZYCISKI -->
-<button class="btn-big blue" onclick="startScan()">📷 SKANUJ ZAWODNIKA</button>
-<button class="btn-big green" onclick="pokazSekcje('sekcja-nowy')">➕ NOWY ZAWODNIK</button>
-<button class="btn-big gray" onclick="pokazSekcje('sekcja-szukaj')">🔍 SZUKAJ (DUMMY)</button>
+<!-- MENU -->
+<div id="menu">
+  <button class="btn-big blue" onclick="startScan()">📷 SKANUJ KOD</button>
+  <button class="btn-big green" onclick="pokazSekcje('sekcja-nowy')">➕ NOWY ZAWODNIK</button>
+  <button class="btn-big gray" onclick="pokazSekcje('sekcja-szukaj')">🔍 SZUKAJ</button>
+</div>
 
 <!-- MIEJSCE NA SKANER -->
-<div id="reader"></div>
+<div id="reader-container" style="display:none;">
+  <div id="reader"></div>
+  <button class="btn-big gray" onclick="stopScan()">❌ Zamknij kamerę</button>
+</div>
 
-<!-- DANE ZAWODNIKA (PO SKANOWANIU) -->
+<!-- DANE ZAWODNIKA -->
 <div id="zawodnik" class="card"></div>
 
 <!-- FORMULARZ EDYCJI -->
 <div id="edycja" class="card">
   <h3>✏️ Edycja zawodnika</h3>
-  <input id="e_imie" placeholder="Imię">
-  <input id="e_nazwisko" placeholder="Nazwisko">
-  <input id="e_rocznik" placeholder="Rocznik">
-  <input id="e_konkurencje" placeholder="Konkurencje">
+  <input id="e_imie">
+  <input id="e_nazwisko">
+  <input id="e_rocznik">
+  <input id="e_konkurencje">
   <button class="btn-big green" onclick="zapiszEdycje()">💾 ZAPISZ ZMIANY</button>
 </div>
 
@@ -81,15 +95,15 @@
   <input id="nazwisko" placeholder="Nazwisko">
   <input id="rocznik" placeholder="Rocznik">
   <input id="konkurencje" placeholder="Konkurencje">
-  <button class="btn-big green" onclick="dodaj()">DODAJ</button>
-  <button class="btn-big gray" onclick="this.parentElement.style.display='none'">ANULUJ</button>
+  <button class="btn-big green" onclick="dodaj()">DODAJ TERAZ</button>
+  <button class="btn-big gray" onclick="ukryjWszystko()">POWRÓT</button>
 </div>
 
 <!-- SEKCJA: SZUKAJ -->
 <div id="sekcja-szukaj" class="card">
-  <h3>🔍 Wyszukiwarka</h3>
-  <p>Opcja w trakcie przygotowania...</p>
-  <button class="btn-big gray" onclick="this.parentElement.style.display='none'">ZAMKNIJ</button>
+  <h3>🔍 Szukaj zawodnika</h3>
+  <p>(Opcja dummy - wkrótce dostępna)</p>
+  <button class="btn-big gray" onclick="ukryjWszystko()">POWRÓT</button>
 </div>
 
 <script>
@@ -97,37 +111,55 @@ const API_URL = "TU_WKLEJ_URL";
 let currentId = null;
 let scanner = null;
 
-// Funkcja pomocnicza do pokazania sekcji i ukrycia innych
-function pokazSekcje(id) {
+function ukryjWszystko() {
   document.querySelectorAll('.card').forEach(c => c.style.display = 'none');
-  document.getElementById(id).style.display = 'block';
-  // Jeśli skaner był włączony, nie ruszamy go, chyba że chcesz go wyłączyć przy zmianie sekcji
+  document.getElementById('reader-container').style.display = 'none';
 }
 
-function startScan() {
-  // Czyścimy poprzednie wyniki
-  document.getElementById("zawodnik").style.display = "none";
-  document.getElementById("edycja").style.display = "none";
-  
-  if (!scanner) {
-    scanner = new Html5Qrcode("reader");
-  }
+function pokazSekcje(id) {
+  ukryjWszystko();
+  document.getElementById(id).style.display = 'block';
+  if (scanner) stopScan();
+}
 
-  scanner.start(
-    { facingMode: "environment" },
-    { fps: 10, qrbox: 250 },
-    onScanSuccess
-  ).catch(err => alert("Błąd kamery: " + err));
+async function startScan() {
+  ukryjWszystko();
+  document.getElementById('reader-container').style.display = 'block';
+  
+  // Małe opóźnienie, żeby przeglądarka "wyrenderowała" div zanim skaner spróbuje go przejąć
+  setTimeout(() => {
+    if (!scanner) {
+      scanner = new Html5Qrcode("reader");
+    }
+
+    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+    scanner.start({ facingMode: "environment" }, config, onScanSuccess)
+      .catch(err => {
+        alert("Problem z kamerą: " + err);
+        document.getElementById('reader-container').style.display = 'none';
+      });
+  }, 300);
+}
+
+function stopScan() {
+  if (scanner && scanner.isScanning) {
+    scanner.stop().then(() => {
+      document.getElementById('reader-container').style.display = 'none';
+    });
+  } else {
+    document.getElementById('reader-container').style.display = 'none';
+  }
 }
 
 function onScanSuccess(id) {
-  scanner.stop();
+  stopScan();
   
   fetch(API_URL + "?id=" + id)
     .then(res => res.text())
     .then(text => {
       if (text === "NOT_FOUND") {
-        alert("Nie znaleziono zawodnika");
+        alert("Nie znaleziono!");
         return;
       }
 
@@ -137,25 +169,28 @@ function onScanSuccess(id) {
       const zDiv = document.getElementById("zawodnik");
       zDiv.style.display = "block";
       zDiv.innerHTML = `
-        <h3>${d.imie} ${d.nazwisko}</h3>
-        <p>Nr: ${d.nr_startowy || "-"}</p>
+        <h2 style="margin:0">${d.imie} ${d.nazwisko}</h2>
+        <p>Nr: <b>${d.nr_startowy || "-"}</b></p>
         <button class="btn-big green" onclick="checkin()">✔ WYDAJ PAKIET</button>
-        <button class="btn-big orange" onclick="document.getElementById('edycja').style.display='block'">✏️ EDYTUJ</button>
+        <button class="btn-big orange" onclick="document.getElementById('edycja').style.display='block'">✏️ EDYTUJ DANE</button>
       `;
 
-      // Wypełnij edycję
       document.getElementById("e_imie").value = d.imie;
       document.getElementById("e_nazwisko").value = d.nazwisko;
       document.getElementById("e_rocznik").value = d.rocznik;
       document.getElementById("e_konkurencje").value = d.konkurencje;
-    });
+    })
+    .catch(e => alert("Błąd pobierania danych"));
 }
 
 function checkin() {
   fetch(API_URL, {
     method: "POST",
     body: JSON.stringify({ action: "checkin", id: currentId })
-  }).then(() => alert("✅ Pakiet wydany"));
+  }).then(() => {
+    alert("✅ Pakiet wydany");
+    ukryjWszystko();
+  });
 }
 
 function zapiszEdycje() {
@@ -171,7 +206,7 @@ function zapiszEdycje() {
     })
   }).then(() => {
     alert("💾 Zapisano");
-    document.getElementById("edycja").style.display = "none";
+    ukryjWszystko();
   });
 }
 
@@ -188,8 +223,9 @@ function dodaj() {
   })
   .then(res => res.json())
   .then(data => {
-    alert("Dodano ID: " + data.id);
-    document.getElementById("sekcja-nowy").style.display = "none";
+    alert("Dodano zawodnika!");
+    ukryjWszystko();
+    document.querySelectorAll('#sekcja-nowy input').forEach(i => i.value = "");
   });
 }
 </script>
