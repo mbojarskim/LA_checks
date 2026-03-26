@@ -7,170 +7,155 @@
 <script src="https://unpkg.com"></script>
 
 <style>
-  body { font-family: 'Segoe UI', Arial, sans-serif; text-align: center; background:#f0f2f5; margin: 0; padding: 15px; }
+  body { font-family: Arial, sans-serif; text-align: center; background:#f2f2f2; margin: 0; padding: 15px; }
   
-  h2 { color: #333; margin-bottom: 20px; }
-
-  /* MENU GŁÓWNE */
-  .menu-container { display: flex; flex-direction: column; gap: 12px; max-width: 500px; margin: 0 auto 20px auto; }
-  
-  .btn-main { 
-    width: 100%; 
-    padding: 20px; 
-    font-size: 20px; 
+  /* DUŻE PRZYCISKI MENU */
+  .btn-big {
+    width: 100%;
+    padding: 25px;
+    margin: 10px 0;
+    font-size: 22px;
     font-weight: bold;
-    border: none; 
-    border-radius: 12px; 
-    cursor: pointer; 
-    transition: opacity 0.2s;
+    border: none;
+    border-radius: 15px;
+    cursor: pointer;
+    display: block;
   }
-  .btn-main:active { opacity: 0.8; }
 
   .blue { background:#2196F3; color:white; }
   .green { background:#4CAF50; color:white; }
-  .gray { background:#757575; color:white; }
   .orange { background:#ff9800; color:white; }
-  
-  .btn-back { background: #333; color: white; margin: 10px 0; padding: 12px; font-size: 16px; width: 100%; }
+  .gray { background:#757575; color:white; }
 
-  /* SEKCJE */
-  .card { background:white; padding:20px; border-radius:15px; max-width: 500px; margin: 10px auto; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-  
-  input { width: 100%; padding: 14px; margin: 8px 0; font-size: 16px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-  
-  /* SKANER */
-  #reader { width: 100%; max-width: 500px; margin: 0 auto; border-radius: 12px; overflow: hidden; background: #000; }
-  #reader__dashboard_section_csr button { padding: 10px; margin: 5px; } /* Stylowanie przycisków systemowych skanera */
+  .card {
+    background:white;
+    margin: 15px 0;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    display: none; /* Domyślnie ukryte */
+  }
+
+  input {
+    width: 90%;
+    padding: 15px;
+    margin: 8px 0;
+    font-size: 18px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+  }
+
+  #reader { width: 100%; margin-top: 10px; border-radius: 10px; overflow: hidden; }
 </style>
 </head>
 
 <body>
 
-<div id="naglowek">
-  <h2>📋 Biuro zawodów</h2>
-</div>
+<h2>📋 Biuro zawodów 2.0</h2>
 
-<!-- MENU ZAWSZE WIDOCZNE (lub ukrywane jeśli wolisz) -->
-<div id="menu-glowne" class="menu-container">
-  <button class="btn-main blue" onclick="wlaczSkaner()">📷 SKANUJ KOD</button>
-  <button class="btn-main green" onclick="pokazSekcje('sekcja-nowy')">➕ NOWY ZAWODNIK</button>
-  <button class="btn-main gray" onclick="pokazSekcje('sekcja-szukaj')">🔍 SZUKAJ</button>
-</div>
+<!-- GŁÓWNE PRZYCISKI -->
+<button class="btn-big blue" onclick="startScan()">📷 SKANUJ ZAWODNIKA</button>
+<button class="btn-big green" onclick="pokazSekcje('sekcja-nowy')">➕ NOWY ZAWODNIK</button>
+<button class="btn-big gray" onclick="pokazSekcje('sekcja-szukaj')">🔍 SZUKAJ (DUMMY)</button>
 
-<!-- MIEJSCE NA SKANER (pojawia się pod menu) -->
-<div id="kontener-skanera" style="display:none; max-width: 500px; margin: 0 auto;">
-  <button class="btn-back" onclick="stopSkaner()">⬅ Zamknij skaner</button>
-  <div id="reader"></div>
-</div>
+<!-- MIEJSCE NA SKANER -->
+<div id="reader"></div>
 
-<!-- SEKCJA: WYNIK SKANU / EDYCJA -->
-<div id="sekcja-wynik" class="card">
-  <div id="dane-zawodnika"></div>
-  <hr>
-  <h4>Edytuj dane:</h4>
+<!-- DANE ZAWODNIKA (PO SKANOWANIU) -->
+<div id="zawodnik" class="card"></div>
+
+<!-- FORMULARZ EDYCJI -->
+<div id="edycja" class="card">
+  <h3>✏️ Edycja zawodnika</h3>
   <input id="e_imie" placeholder="Imię">
   <input id="e_nazwisko" placeholder="Nazwisko">
   <input id="e_rocznik" placeholder="Rocznik">
   <input id="e_konkurencje" placeholder="Konkurencje">
-  <button class="btn-main green" onclick="zapiszEdycje()">💾 ZAPISZ ZMIANY</button>
-  <button class="btn-main orange" style="margin-top:10px" onclick="checkin()">✔ WYDAJ PAKIET</button>
+  <button class="btn-big green" onclick="zapiszEdycje()">💾 ZAPISZ ZMIANY</button>
 </div>
 
 <!-- SEKCJA: NOWY ZAWODNIK -->
 <div id="sekcja-nowy" class="card">
-  <h3>Dodaj zawodnika</h3>
+  <h3>➕ Dodaj zawodnika</h3>
   <input id="imie" placeholder="Imię">
   <input id="nazwisko" placeholder="Nazwisko">
   <input id="rocznik" placeholder="Rocznik">
   <input id="konkurencje" placeholder="Konkurencje">
-  <button class="btn-main green" onclick="dodaj()">DODAJ ZAWODNIKA</button>
-  <button class="btn-back" onclick="ukryjWszystko()">Anuluj</button>
+  <button class="btn-big green" onclick="dodaj()">DODAJ</button>
+  <button class="btn-big gray" onclick="this.parentElement.style.display='none'">ANULUJ</button>
 </div>
 
 <!-- SEKCJA: SZUKAJ -->
 <div id="sekcja-szukaj" class="card">
-  <h3>Wyszukiwarka</h3>
-  <p>Funkcja szukania wkrótce...</p>
-  <button class="btn-back" onclick="ukryjWszystko()">Wróć</button>
+  <h3>🔍 Wyszukiwarka</h3>
+  <p>Opcja w trakcie przygotowania...</p>
+  <button class="btn-big gray" onclick="this.parentElement.style.display='none'">ZAMKNIJ</button>
 </div>
 
 <script>
 const API_URL = "TU_WKLEJ_URL";
 let currentId = null;
-let html5QrCode = null;
+let scanner = null;
 
-function pokazSekcje(idSekcji) {
-  ukryjWszystko();
-  document.getElementById(idSekcji).style.display = "block";
-}
-
-function ukryjWszystko() {
+// Funkcja pomocnicza do pokazania sekcji i ukrycia innych
+function pokazSekcje(id) {
   document.querySelectorAll('.card').forEach(c => c.style.display = 'none');
-  document.getElementById('kontener-skanera').style.display = 'none';
-  if (html5QrCode && html5QrCode.isScanning) {
-      stopSkaner();
-  }
+  document.getElementById(id).style.display = 'block';
+  // Jeśli skaner był włączony, nie ruszamy go, chyba że chcesz go wyłączyć przy zmianie sekcji
 }
 
-// OBSŁUGA SKANERA
-function wlaczSkaner() {
-  ukryjWszystko();
-  document.getElementById('kontener-skanera').style.display = 'block';
+function startScan() {
+  // Czyścimy poprzednie wyniki
+  document.getElementById("zawodnik").style.display = "none";
+  document.getElementById("edycja").style.display = "none";
   
-  if (!html5QrCode) {
-    html5QrCode = new Html5Qrcode("reader");
+  if (!scanner) {
+    scanner = new Html5Qrcode("reader");
   }
-  
-  const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-  
-  html5QrCode.start(
-    { facingMode: "environment" }, 
-    config, 
+
+  scanner.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: 250 },
     onScanSuccess
-  ).catch(err => {
-    alert("Błąd kamery: " + err);
-    document.getElementById('kontener-skanera').style.display = 'none';
-  });
+  ).catch(err => alert("Błąd kamery: " + err));
 }
 
-function stopSkaner() {
-  if (html5QrCode) {
-    html5QrCode.stop().then(() => {
-      document.getElementById('kontener-skanera').style.display = 'none';
-    }).catch(err => console.log("Błąd zatrzymania:", err));
-  }
-}
+function onScanSuccess(id) {
+  scanner.stop();
+  
+  fetch(API_URL + "?id=" + id)
+    .then(res => res.text())
+    .then(text => {
+      if (text === "NOT_FOUND") {
+        alert("Nie znaleziono zawodnika");
+        return;
+      }
 
-function onScanSuccess(decodedText) {
-  stopSkaner();
-  fetch(API_URL + "?id=" + decodedText)
-    .then(res => res.json())
-    .then(d => {
+      const d = JSON.parse(text);
       currentId = d.id;
-      document.getElementById('sekcja-wynik').style.display = 'block';
-      
-      document.getElementById('dane-zawodnika').innerHTML = `
-        <h2 style="margin:0">${d.imie} ${d.nazwisko}</h2>
-        <p>Nr startowy: <b>${d.nr_startowy || 'brak'}</b></p>
+
+      const zDiv = document.getElementById("zawodnik");
+      zDiv.style.display = "block";
+      zDiv.innerHTML = `
+        <h3>${d.imie} ${d.nazwisko}</h3>
+        <p>Nr: ${d.nr_startowy || "-"}</p>
+        <button class="btn-big green" onclick="checkin()">✔ WYDAJ PAKIET</button>
+        <button class="btn-big orange" onclick="document.getElementById('edycja').style.display='block'">✏️ EDYTUJ</button>
       `;
 
+      // Wypełnij edycję
       document.getElementById("e_imie").value = d.imie;
       document.getElementById("e_nazwisko").value = d.nazwisko;
       document.getElementById("e_rocznik").value = d.rocznik;
       document.getElementById("e_konkurencje").value = d.konkurencje;
-    })
-    .catch(err => alert("Nie znaleziono zawodnika lub błąd bazy"));
+    });
 }
 
-// AKCJE API
 function checkin() {
   fetch(API_URL, {
     method: "POST",
     body: JSON.stringify({ action: "checkin", id: currentId })
-  }).then(() => {
-    alert("✅ Pakiet wydany!");
-    ukryjWszystko();
-  });
+  }).then(() => alert("✅ Pakiet wydany"));
 }
 
 function zapiszEdycje() {
@@ -186,28 +171,25 @@ function zapiszEdycje() {
     })
   }).then(() => {
     alert("💾 Zapisano");
-    ukryjWszystko();
+    document.getElementById("edycja").style.display = "none";
   });
 }
 
 function dodaj() {
-  const dane = {
-    action: "add",
-    imie: document.getElementById("imie").value,
-    nazwisko: document.getElementById("nazwisko").value,
-    rocznik: document.getElementById("rocznik").value,
-    konkurencje: document.getElementById("konkurencje").value
-  };
-
   fetch(API_URL, {
     method: "POST",
-    body: JSON.stringify(dane)
+    body: JSON.stringify({
+      action: "add",
+      imie: document.getElementById("imie").value,
+      nazwisko: document.getElementById("nazwisko").value,
+      rocznik: document.getElementById("rocznik").value,
+      konkurencje: document.getElementById("konkurencje").value
+    })
   })
   .then(res => res.json())
   .then(data => {
-    alert("Dodano pomyślnie!");
-    document.querySelectorAll('#sekcja-nowy input').forEach(i => i.value = "");
-    ukryjWszystko();
+    alert("Dodano ID: " + data.id);
+    document.getElementById("sekcja-nowy").style.display = "none";
   });
 }
 </script>
