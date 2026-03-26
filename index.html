@@ -1,320 +1,240 @@
 <!DOCTYPE html>
-<html>
+<html lang="pl">
 <head>
-<meta charset="UTF-8">
-<title>Biuro zawodów</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biuro Zawodów</title>
+    <script src="https://unpkg.com"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background: #f2f2f2; margin: 0; padding: 0; }
+        .card { background: white; margin: 15px auto; padding: 15px; border-radius: 10px; width: 90%; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        button { width: 90%; padding: 16px; margin: 8px 0; font-size: 18px; border: none; border-radius: 10px; cursor: pointer; }
+        input { width: 85%; padding: 12px; margin: 8px 0; font-size: 16px; border: 1px solid #ccc; border-radius: 5px; }
+        
+        .blue { background: #2196F3; color: white; }
+        .green { background: #4CAF50; color: white; }
+        .orange { background: #ff9800; color: white; }
+        .red { background: #f44336; color: white; }
+        .gray { background: #9e9e9e; color: white; }
 
-<script src="https://unpkg.com/html5-qrcode"></script>
-
-<style>
-html, body {
-  height: 100%;
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #f2f2f2;
-}
-
-/* =========================
-   🟦 MENU STARTOWE (FULL SCREEN)
-   ========================= */
-#menu {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-/* duże kafle na cały ekran */
-.tile {
-  flex: 1;
-  width: 100%;
-  font-size: 32px;
-  border: none;
-  color: white;
-  cursor: pointer;
-}
-
-/* kolory przycisków */
-.blue { background: #2196F3; }
-.green { background: #4CAF50; }
-.orange { background: #ff9800; }
-
-/* =========================
-   🧾 OGÓLNE KARTY (ZAWODNIK / WYNIKI)
-   ========================= */
-.card {
-  background: white;
-  margin: 10px;
-  padding: 15px;
-  border-radius: 10px;
-}
-
-/* =========================
-   🔘 PRZYCISKI STANDARDOWE (wewnątrz widoków)
-   ========================= */
-button {
-  width: 90%;
-  padding: 16px;
-  margin: 6px;
-  font-size: 18px;
-  border: none;
-  border-radius: 10px;
-}
-
-/* =========================
-   ✏️ INPUTY (telefon friendly)
-   ========================= */
-input {
-  width: 90%;
-  padding: 12px;
-  margin: 6px;
-  font-size: 18px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-}
-
-/* =========================
-   📷 SCANNER (kamera QR)
-   ========================= */
-#reader {
-  width: 100%;
-}
-
-/* =========================
-   📱 RESPONSYWNOŚĆ (opcjonalnie, ale pomaga)
-   ========================= */
-@media (max-width: 600px) {
-  .tile {
-    font-size: 28px;
-  }
-
-  button {
-    font-size: 20px;
-  }
-
-  input {
-    font-size: 20px;
-  }
-}
-</style>
+        #menu { display: flex; flex-direction: column; height: 100vh; }
+        .tile { flex: 1; font-size: 24px; font-weight: bold; border-radius: 0; margin: 0; }
+        
+        #app-content { display: none; padding-top: 10px; }
+        #reader { width: 100%; max-width: 400px; margin: 0 auto; }
+        .status-badge { font-weight: bold; padding: 5px 10px; border-radius: 5px; }
+    </style>
 </head>
-
 <body>
 
-<h2>📋 Biuro zawodów</h2>
-<button onclick="backToMenu()">🏠 MENU</button>
-<!-- 🔎 SEARCH -->
-<div class="card">
-  <h3>🔎 Szukaj</h3>
-  <input id="szukaj" placeholder="Nazwisko">
-  <button class="blue" onclick="szukaj()">Szukaj</button>
+<!-- GŁÓWNE MENU -->
+<div id="menu">
+    <button class="tile blue" onclick="showSection('scan')">📷 SKANUJ KOD QR</button>
+    <button class="tile green" onclick="showSection('search')">🔎 SZUKAJ NAZWISKA</button>
+    <button class="tile orange" onclick="showSection('add')">➕ DODAJ NOWEGO</button>
 </div>
 
-<!-- 📷 SCAN -->
-<button class="blue" onclick="startScan()">📷 Skanuj zawodnika</button>
+<!-- TREŚĆ APLIKACJI (UKRYTA NA START) -->
+<div id="app-content">
+    <button class="gray" onclick="backToMenu()">🏠 POWRÓT DO MENU</button>
 
-<div id="reader"></div>
+    <!-- SEKTCJA: SKANOWANIE -->
+    <div id="sec-scan" style="display:none;">
+        <div id="reader"></div>
+    </div>
 
-<!-- 👤 ZAWODNIK -->
-<div id="zawodnik" class="card" style="display:none;"></div>
+    <!-- SEKCJA: WYSZUKIWANIE -->
+    <div id="sec-search" style="display:none;" class="card">
+        <h3>🔎 Szukaj zawodnika</h3>
+        <input type="text" id="input-szukaj" placeholder="Wpisz nazwisko...">
+        <button class="blue" onclick="wykonajSzukaj()">Szukaj</button>
+    </div>
 
-<!-- ✏ EDYCJA -->
-<div id="edycja" class="card" style="display:none;">
-  <h3>Edycja</h3>
+    <!-- SEKCJA: DODAWANIE -->
+    <div id="sec-add" style="display:none;" class="card">
+        <h3>➕ Nowy zawodnik</h3>
+        <input id="new-imie" placeholder="Imię">
+        <input id="new-nazwisko" placeholder="Nazwisko">
+        <input id="new-rocznik" placeholder="Rocznik">
+        <input id="new-konkurencje" placeholder="Konkurencje">
+        <input id="new-nr" placeholder="Numer startowy">
+        <button class="green" onclick="dodajZawodnika()">Zapisz w bazie</button>
+    </div>
 
-  <input id="e_imie"><br>
-  <input id="e_nazwisko"><br>
-  <input id="e_rocznik"><br>
-  <input id="e_konkurencje"><br>
-
-  <button class="green" onclick="zapisz()">Zapisz</button>
-</div>
-
-<!-- ➕ DODAWANIE -->
-<button class="green" onclick="toggleAdd()">➕ Dodaj zawodnika</button>
-
-<div id="add" class="card" style="display:none;">
-  <h3>Nowy zawodnik</h3>
-
-  <input id="imie" placeholder="Imię"><br>
-  <input id="nazwisko" placeholder="Nazwisko"><br>
-  <input id="rocznik" placeholder="Rocznik"><br>
-  <input id="konkurencje" placeholder="Konkurencje"><br>
-  <input id="nr" placeholder="Numer startowy"><br>
-
-  <button class="green" onclick="dodaj()">Zapisz</button>
+    <!-- WYNIKI I PROFIL ZAWODNIKA -->
+    <div id="wyniki-kontener" style="display:none;"></div>
+    
+    <div id="profil-zawodnika" class="card" style="display:none;">
+        <div id="profil-dane"></div>
+        <hr>
+        <div id="edycja-form" style="display:none;">
+            <h4>Edycja danych</h4>
+            <input id="edit-imie">
+            <input id="edit-nazwisko">
+            <input id="edit-rocznik">
+            <input id="edit-konkurencje">
+            <button class="green" onclick="zapiszEdycje()">Zatwierdź zmiany</button>
+        </div>
+    </div>
 </div>
 
 <script>
-
-const API_URL = "https://script.google.com/macros/s/AKfycbyCa1bGgo4CarwRp3JjYYwML3SQghse-MvQxEjByvlXj8SLP5eXrPC-NZduQizwLgMx/exec";
+// !!! PODMIEŃ TEN LINK NA SWÓJ Z GOOGLE APPS SCRIPT !!!
+const API_URL = "https://script.google.com";
 
 let currentId = null;
-let scanner = null;
+let html5QrCode = null;
 
-// 🔁 RESET
-function reset() {
-  document.getElementById("zawodnik").style.display = "none";
-  document.getElementById("edycja").style.display = "none";
-  document.getElementById("add").style.display = "none";
-  document.getElementById("reader").innerHTML = "";
-  currentId = null;
+// NAWIGACJA
+function showSection(section) {
+    document.getElementById("menu").style.display = "none";
+    document.getElementById("app-content").style.display = "block";
+    
+    // Ukryj wszystkie sekcje
+    ["sec-scan", "sec-search", "sec-add", "profil-zawodnika", "wyniki-kontener"].forEach(id => {
+        document.getElementById(id).style.display = "none";
+    });
+
+    // Pokaż wybraną
+    if(section === 'scan') {
+        document.getElementById("sec-scan").style.display = "block";
+        startScanner();
+    } else if(section === 'search') {
+        document.getElementById("sec-search").style.display = "block";
+    } else if(section === 'add') {
+        document.getElementById("sec-add").style.display = "block";
+    }
 }
 
-// 📷 SCAN
-function startScan() {
-  hideMenu();
-  reset();
-  scanner = new Html5Qrcode("reader");
-
-  scanner.start(
-    { facingMode: "environment" },
-    { fps: 10, qrbox: 250 },
-    onScan
-  );
+function backToMenu() {
+    if(html5QrCode) html5QrCode.stop().catch(() => {});
+    document.getElementById("menu").style.display = "flex";
+    document.getElementById("app-content").style.display = "none";
 }
 
-function onScan(id) {
-  scanner.stop();
+// SKANOWANIE
+function startScanner() {
+    html5QrCode = new Html5Qrcode("reader");
+    html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        (decodedText) => {
+            html5QrCode.stop();
+            pobierzDane(decodedText);
+        }
+    ).catch(err => alert("Błąd kamery: " + err));
+}
 
-  fetch(API_URL + "?id=" + id)
+// POBIERANIE DANYCH
+function pobierzDane(id) {
+    fetch(`${API_URL}?id=${id}`)
     .then(r => r.json())
     .then(d => {
-      currentId = d.id;
-
-      document.getElementById("zawodnik").style.display = "block";
-
-      document.getElementById("zawodnik").innerHTML = `
-        <h3>${d.imie} ${d.nazwisko}</h3>
-        Nr: ${d.nr_startowy || "-"}<br>
-        Rocznik: ${d.rocznik}<br>
-        Konkurencje: ${d.konkurencje}<br>
-        Pakiet: ${d.pakiet === "TAK" ? "🔴 ODEBRANY" : "🟢 NIE"}<br><br>
-
-        ${
-          d.pakiet === "TAK"
-          ? "<button disabled>Już odebrany</button>"
-          : '<button class="green" onclick="checkin()">✔ Wydaj pakiet</button>'
-        }
-
-        <button class="orange" onclick="editMode()">✏ Edytuj</button>
-      `;
-
-      document.getElementById("e_imie").value = d.imie;
-      document.getElementById("e_nazwisko").value = d.nazwisko;
-      document.getElementById("e_rocznik").value = d.rocznik;
-      document.getElementById("e_konkurencje").value = d.konkurencje;
+        if(d === "NOT_FOUND") return alert("Nie znaleziono zawodnika!");
+        wyswietlProfil(d);
     });
 }
 
-// ✔ PACKET
-function checkin() {
-  fetch(API_URL, {
-    method: "POST",
-    body: JSON.stringify({
-      action: "checkin",
-      id: currentId
-    })
-  }).then(() => {
-    alert("Wydano pakiet");
-    reset();
-  });
+function wyswietlProfil(d) {
+    currentId = d.id;
+    const profil = document.getElementById("profil-zawodnika");
+    const dane = document.getElementById("profil-dane");
+    
+    profil.style.display = "block";
+    document.getElementById("wyniki-kontener").style.display = "none";
+    document.getElementById("edycja-form").style.display = "none";
+
+    const statusPakiet = d.pakiet === "TAK" 
+        ? '<span class="status-badge red">PAKIET ODEBRANY</span>' 
+        : '<span class="status-badge green">DO ODBIORU</span>';
+
+    dane.innerHTML = `
+        <h2>${d.imie} ${d.nazwisko}</h2>
+        <p><strong>Numer:</strong> ${d.nr_startowy || "---"}</p>
+        <p><strong>Rocznik:</strong> ${d.rocznik}</p>
+        <p><strong>Konkurencje:</strong> ${d.konkurencje}</p>
+        <p><strong>Status:</strong> ${statusPakiet}</p>
+        ${d.pakiet !== "TAK" ? `<button class="green" onclick="wydajPakiet()">✔ WYDAJ PAKIET</button>` : ''}
+        <button class="orange" onclick="document.getElementById('edycja-form').style.display='block'">✏ EDYTUJ DANE</button>
+    `;
+
+    // Wypełnij pola edycji
+    document.getElementById("edit-imie").value = d.imie;
+    document.getElementById("edit-nazwisko").value = d.nazwisko;
+    document.getElementById("edit-rocznik").value = d.rocznik;
+    document.getElementById("edit-konkurencje").value = d.konkurencje;
 }
 
-// ✏ EDIT
-function editMode() {
-  document.getElementById("edycja").style.display = "block";
-}
+// WYSZUKIWANIE
+function wykonajSzukaj() {
+    const txt = document.getElementById("input-szukaj").value;
+    if(txt.length < 3) return alert("Wpisz minimum 3 znaki");
 
-function zapisz() {
-  fetch(API_URL, {
-    method: "POST",
-    body: JSON.stringify({
-      action: "edit",
-      id: currentId,
-      imie: e_imie.value,
-      nazwisko: e_nazwisko.value,
-      rocznik: e_rocznik.value,
-      konkurencje: e_konkurencje.value
-    })
-  }).then(() => {
-    alert("Zapisano");
-    reset();
-  });
-}
-
-// ➕ ADD
-function toggleAdd() {
-  reset();
-  document.getElementById("add").style.display =
-    document.getElementById("add").style.display === "block" ? "none" : "block";
-}
-
-function dodaj() {
-  fetch(API_URL, {
-    method: "POST",
-    body: JSON.stringify({
-      action: "add",
-      imie: imie.value,
-      nazwisko: nazwisko.value,
-      rocznik: rocznik.value,
-      konkurencje: konkurencje.value,
-      nr_startowy: nr.value
-    })
-  })
-  .then(r => r.json())
-  .then(() => {
-    alert("Dodano zawodnika");
-    reset();
-  });
-}
-
-// 🔎 SEARCH
-function szukaj() {
-  fetch(API_URL + "?search=" + szukaj.value)
+    fetch(`${API_URL}?search=${encodeURIComponent(txt)}`)
     .then(r => r.json())
     .then(list => {
+        const kontener = document.getElementById("wyniki-kontener");
+        kontener.style.display = "block";
+        kontener.innerHTML = "<h4>Wyniki wyszukiwania:</h4>";
+        
+        if(list.length === 0) kontener.innerHTML += "Brak wyników.";
 
-      let html = "<h3>Wyniki</h3>";
-
-      list.forEach(z => {
-        html += `
-          <div class="card">
-            ${z.imie} ${z.nazwisko}
-            <br>
-            <button onclick="onScan('${z.id}')">Wybierz</button>
-          </div>
-        `;
-      });
-
-      document.getElementById("zawodnik").style.display = "block";
-      document.getElementById("zawodnik").innerHTML = html;
+        list.forEach(z => {
+            kontener.innerHTML += `
+                <div class="card" onclick="pobierzDane('${z.id}')" style="cursor:pointer; border:1px solid #2196F3">
+                    <strong>${z.imie} ${z.nazwisko}</strong><br>
+                    <small>Nr: ${z.nr_startowy} | ${z.konkurencje}</small>
+                </div>
+            `;
+        });
     });
 }
-// Ukrywanie menu
-function hideMenu() {
-  document.getElementById("menu").style.display = "none";
+
+// AKCJE POST
+function wydajPakiet() {
+    if(!confirm("Czy na pewno wydać pakiet?")) return;
+    fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "checkin", id: currentId })
+    }).then(() => {
+        alert("Pakiet odznaczony!");
+        pobierzDane(currentId);
+    });
 }
 
-// Pokazanie wynikow  
-function showSearch() {
-  hideMenu();
-
-  document.getElementById("zawodnik").style.display = "block";
-
-  document.getElementById("zawodnik").innerHTML = `
-    <h2>🔎 Szukaj zawodnika</h2>
-    <input id="szukajInput" style="width:90%;font-size:24px;padding:10px;">
-    <button class="tile green" style="flex:0;height:120px;font-size:24px;" onclick="szukaj()">Szukaj</button>
-  `;
+function zapiszEdycje() {
+    fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({
+            action: "edit",
+            id: currentId,
+            imie: document.getElementById("edit-imie").value,
+            nazwisko: document.getElementById("edit-nazwisko").value,
+            rocznik: document.getElementById("edit-rocznik").value,
+            konkurencje: document.getElementById("edit-konkurencje").value
+        })
+    }).then(() => {
+        alert("Dane zaktualizowane");
+        pobierzDane(currentId);
+    });
 }
 
-// Powrot do Menu  
-function backToMenu() {
-  document.getElementById("menu").style.display = "flex";
-  reset();
+function dodajZawodnika() {
+    const data = {
+        action: "add",
+        imie: document.getElementById("new-imie").value,
+        nazwisko: document.getElementById("new-nazwisko").value,
+        rocznik: document.getElementById("new-rocznik").value,
+        konkurencje: document.getElementById("new-konkurencje").value,
+        nr_startowy: document.getElementById("new-nr").value
+    };
+
+    fetch(API_URL, { method: "POST", body: JSON.stringify(data) })
+    .then(() => {
+        alert("Zawodnik dodany do bazy!");
+        backToMenu();
+    });
 }
-  
 </script>
-
 </body>
 </html>
