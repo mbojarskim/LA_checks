@@ -1,159 +1,70 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Biuro zawodów</title>
-<script src="https://unpkg.com"></script>
-
-<style>
-  body { font-family: Arial; text-align: center; background:#f2f2f2; margin:0; padding:10px; }
-  
-  /* DUŻE PRZYCISKI - jak prosiłeś */
-  .btn-big {
-    width: 100%;
-    padding: 25px;
-    margin: 10px 0;
-    font-size: 22px;
-    font-weight: bold;
-    border: none;
-    border-radius: 15px;
-    cursor: pointer;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-  }
-
-  .green { background:#4CAF50; color:white; }
-  .blue { background:#2196F3; color:white; }
-  .orange { background:#ff9800; color:white; }
-  .gray { background:#757575; color:white; }
-
-  .card { background:white; margin:15px 0; padding:20px; border-radius:15px; display: none; }
-  input { width:90%; padding:18px; margin:8px; font-size:18px; border:1px solid #ccc; border-radius:10px; box-sizing: border-box; }
-  
-  /* TWOJE MIEJSCE NA APARAT */
-  #reader { width: 100%; border-radius: 15px; overflow: hidden; background: black; }
-</style>
+  <meta charset="UTF-8">
+  <title>Skaner QR</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
 
 <body>
 
-<h2>📋 Biuro zawodów</h2>
+<h2>Skaner QR</h2>
 
-<!-- TWOJE TRZY GŁÓWNE PRZYCISKI -->
-<div id="menu">
-  <button class="btn-big blue" onclick="startScan()">📷 SKANUJ ZAWODNIKA</button>
-  <button class="btn-big green" onclick="pokazSekcje('sekcja-nowy')">➕ NOWY ZAWODNIK</button>
-  <button class="btn-big gray" onclick="pokazSekcje('sekcja-szukaj')">🔍 SZUKAJ</button>
-</div>
+<div id="reader" style="width:300px;"></div>
 
-<!-- KONTENER NA APARAT -->
-<div id="reader"></div>
-
-<!-- DANE ZAWODNIKA (PO SKANOWANIU) -->
-<div id="zawodnik" class="card"></div>
-
-<!-- FORMULARZ EDYCJI -->
-<div id="edycja" class="card">
-  <h3>Edycja zawodnika</h3>
-  <input id="e_imie"> <input id="e_nazwisko"> <input id="e_rocznik"> <input id="e_konkurencje">
-  <button class="btn-big green" onclick="zapiszEdycje()">💾 Zapisz</button>
-  <button class="btn-big gray" onclick="ukryjWszystko()">Anuluj</button>
-</div>
-
-<!-- NOWY ZAWODNIK -->
-<div id="sekcja-nowy" class="card">
-  <h3>➕ Nowy zawodnik</h3>
-  <input id="imie" placeholder="Imię">
-  <input id="nazwisko" placeholder="Nazwisko">
-  <input id="rocznik" placeholder="Rocznik">
-  <input id="konkurencje" placeholder="Konkurencje">
-  <button class="btn-big green" onclick="dodaj()">Dodaj teraz</button>
-  <button class="btn-big gray" onclick="ukryjWszystko()">Wróć</button>
-</div>
-
-<!-- SZUKAJ (DUMMY) -->
-<div id="sekcja-szukaj" class="card">
-  <h3>🔍 Szukaj</h3>
-  <p>Opcja wkrótce dostępna...</p>
-  <button class="btn-big gray" onclick="ukryjWszystko()">Wróć</button>
-</div>
+<div id="result" style="margin-top:20px;"></div>
 
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbyCa1bGgo4CarwRp3JjYYwML3SQghse-MvQxEjByvlXj8SLP5eXrPC-NZduQizwLgMx/exec";
-let currentId = null;
-let html5QrCode = null;
 
-function ukryjWszystko() {
-  document.querySelectorAll('.card').forEach(c => c.style.display = 'none');
-}
+function showData(data) {
+  let html = `
+    <p><b>${data.imie} ${data.nazwisko}</b></p>
+    <p>Nr startowy: ${data.nr}</p>
+    <p>Konkurencje: ${data.konkurencja1 || "-"}, ${data.konkurencja2 || "-"}</p>
+    <p>Status: ${data.pakiet || "NIE"}</p>
+  `;
 
-function pokazSekcje(id) {
-  ukryjWszystko();
-  if (html5QrCode && html5QrCode.isScanning) {
-     html5QrCode.stop().then(() => {
-         document.getElementById(id).style.display = 'block';
-     });
+  if (data.pakiet === "TAK") {
+    html += `<p style="color:red;">Pakiet już odebrany</p>`;
   } else {
-     document.getElementById(id).style.display = 'block';
-  }
-}
-
-// TWOJA ORYGINALNA LOGIKA STARTU
-function startScan() {
-  ukryjWszystko();
-  document.getElementById("reader").innerHTML = "";
-
-  if (!html5QrCode) {
-    html5QrCode = new Html5Qrcode("reader");
+    html += `<button onclick="odbierz(${data.row})">Odbierz pakiet</button>`;
   }
 
-  html5QrCode.start(
-    { facingMode: "environment" },
-    { fps: 10, qrbox: 250 },
-    onScanSuccess
-  ).catch(err => alert("Błąd aparatu: " + err));
+  document.getElementById("result").innerHTML = html;
 }
 
-function onScanSuccess(id) {
-  html5QrCode.stop().then(() => {
-    fetch(API_URL + "?id=" + id)
-      .then(res => res.text())
-      .then(text => {
-        if (text === "NOT_FOUND") { alert("Nie znaleziono"); return; }
-        const d = JSON.parse(text);
-        currentId = d.id;
-
-        const z = document.getElementById("zawodnik");
-        z.style.display = "block";
-        z.innerHTML = `
-          <h3>${d.imie} ${d.nazwisko}</h3>
-          Nr: ${d.nr_startowy || "-"}<br><br>
-          <button class="btn-big green" onclick="checkin()">✔ WYDAJ PAKIET</button>
-          <button class="btn-big orange" onclick="document.getElementById('edycja').style.display='block'">✏️ EDYTUJ</button>
-        `;
-        document.getElementById("e_imie").value = d.imie;
-        document.getElementById("e_nazwisko").value = d.nazwisko;
-        document.getElementById("e_rocznik").value = d.rocznik;
-        document.getElementById("e_konkurencje").value = d.konkurencje;
-      });
+function odbierz(row) {
+  fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({row: row})
+  })
+  .then(r => r.json())
+  .then(() => {
+    alert("Zapisano!");
+    document.getElementById("result").innerHTML = "";
   });
 }
 
-function checkin() {
-  fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "checkin", id: currentId }) })
-  .then(() => { alert("✅ Wydano"); ukryjWszystko(); });
+function onScanSuccess(decodedText) {
+  fetch(API_URL + "?id=" + decodedText)
+    .then(r => r.json())
+    .then(data => {
+      if (data.found) {
+        showData(data);
+      } else {
+        document.getElementById("result").innerHTML = "Nie znaleziono";
+      }
+    });
 }
 
-function zapiszEdycje() {
-  fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "edit", id: currentId, imie: document.getElementById("e_imie").value, nazwisko: document.getElementById("e_nazwisko").value, rocznik: document.getElementById("e_rocznik").value, konkurencje: document.getElementById("e_konkurencje").value }) })
-  .then(() => { alert("💾 Zapisano"); ukryjWszystko(); });
-}
-
-function dodaj() {
-  fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "add", imie: document.getElementById("imie").value, nazwisko: document.getElementById("nazwisko").value, rocznik: document.getElementById("rocznik").value, konkurencje: document.getElementById("konkurencje").value }) })
-  .then(res => res.json())
-  .then(data => { alert("Dodano!"); ukryjWszystko(); });
-}
+const html5QrCode = new Html5Qrcode("reader");
+html5QrCode.start(
+  { facingMode: "environment" },
+  { fps: 10, qrbox: 250 },
+  onScanSuccess
+);
 </script>
+
 </body>
 </html>
