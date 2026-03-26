@@ -153,24 +153,56 @@
         }
     }
     
-    async function updatePlayer(updatesObj) {
-        if(!currentRowIndex) return false;
+        async function updatePlayer(updatesObj) {
+        if(!currentRowIndex) {
+            setDebug('❌ Brak currentRowIndex');
+            return false;
+        }
+        
         try {
-            setDebug(`Aktualizacja: ${JSON.stringify(updatesObj)}`);
+            setDebug(`📤 Wysyłam aktualizację: ${JSON.stringify(updatesObj)}`);
+            setDebug(`📍 Wiersz: ${currentRowIndex}`);
+            
+            const payload = { 
+                rowIndex: currentRowIndex, 
+                updates: updatesObj 
+            };
+            
             const response = await fetch(API_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ rowIndex: currentRowIndex, updates: updatesObj })
+                mode: 'cors',
+                headers: { 
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload)
             });
-            const result = await response.json();
-            if(result.success) {
-                showAlert("✅ Zaktualizowano!", false);
-                return true;
+            
+            setDebug(`📥 Status odpowiedzi: ${response.status}`);
+            
+            const text = await response.text();
+            setDebug(`📄 Odpowiedź surowa: ${text}`);
+            
+            let result;
+            try {
+                result = JSON.parse(text);
+            } catch(e) {
+                setDebug(`❌ Błąd parsowania JSON: ${e}`);
+                throw new Error('Nieprawidłowa odpowiedź z serwera');
             }
-            return false;
+            
+            if(result.success) {
+                setDebug(`✅ Aktualizacja udana: ${result.message || ''}`);
+                showAlert("✅ Zaktualizowano dane!", false);
+                return true;
+            } else {
+                setDebug(`❌ Błąd: ${result.error}`);
+                showAlert(`Błąd: ${result.error}`);
+                return false;
+            }
+            
         } catch(err) {
-            setDebug(`Błąd aktualizacji: ${err.message}`);
-            showAlert(`Błąd: ${err.message}`);
+            setDebug(`❌ Błąd fetch: ${err.message}`);
+            showAlert(`Błąd połączenia: ${err.message}`);
             return false;
         }
     }
