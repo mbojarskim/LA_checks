@@ -2,15 +2,15 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Biuro zawodów</title>
 <script src="https://unpkg.com"></script>
 
 <style>
-  body { font-family: Arial, sans-serif; text-align: center; background:#f2f2f2; margin: 0; padding: 10px; }
-  
-  /* WIELKIE PRZYCISKI */
-  button {
+  body { font-family: Arial; text-align: center; background:#f2f2f2; margin:0; padding:10px; }
+
+  /* TWOJE NOWE DUŻE PRZYCISKI */
+  .btn-big {
     width: 100%;
     padding: 25px;
     margin: 10px 0;
@@ -19,100 +19,115 @@
     border: none;
     border-radius: 15px;
     cursor: pointer;
+    display: block;
   }
 
-  .blue { background:#2196F3; color:white; }
   .green { background:#4CAF50; color:white; }
+  .blue { background:#2196F3; color:white; }
   .orange { background:#ff9800; color:white; }
   .gray { background:#757575; color:white; }
 
-  .card { background:white; margin: 15px 0; padding: 20px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-  input { width: 95%; padding: 18px; margin: 8px 0; font-size: 18px; border: 1px solid #ccc; border-radius: 10px; box-sizing: border-box; }
-
-  /* MIEJSCE NA APARAT */
-  #reader-container { width: 100%; max-width: 500px; margin: 0 auto; }
-  #reader { width: 100%; border-radius: 15px; overflow: hidden; background: #000; }
+  .card { background:white; margin:10px 0; padding:20px; border-radius:15px; display: none; }
+  input { width:90%; padding:15px; margin:8px; font-size:18px; border:1px solid #ccc; border-radius:10px; }
+  
+  #reader { width: 100%; border-radius: 15px; overflow: hidden; background: black; }
 </style>
 </head>
 
 <body>
 
-<h2>📋 Biuro zawodów</h2>
+<h2>📋 Biuro zawodów 1.5</h2>
 
-<!-- GŁÓWNE PRZYCISKI -->
-<button class="blue" onclick="startScan()">📷 SKANUJ ZAWODNIKA</button>
-<button class="green" onclick="pokazSekcje('sekcja-nowy')">➕ NOWY ZAWODNIK</button>
-<button class="gray" onclick="pokazSekcje('sekcja-szukaj')">🔍 SZUKAJ</button>
-
-<!-- DYNAMICZNY KONTENER SKANERA -->
-<div id="reader-container">
-  <div id="reader"></div>
+<!-- GŁÓWNE MENU -->
+<div id="menu">
+  <button class="btn-big blue" onclick="startScan()">📷 SKANUJ ZAWODNIKA</button>
+  <button class="btn-big green" onclick="pokazSekcje('sekcja-nowy')">➕ NOWY ZAWODNIK</button>
+  <button class="btn-big gray" onclick="pokazSekcje('sekcja-szukaj')">🔍 SZUKAJ</button>
 </div>
 
-<!-- KARTY SEKCJI -->
-<div id="zawodnik" class="card" style="display:none;"></div>
+<!-- MIEJSCE NA SKANER -->
+<div id="reader"></div>
 
-<div id="edycja" class="card" style="display:none;">
+<!-- DANE ZAWODNIKA (PO SKANIE) -->
+<div id="zawodnik" class="card"></div>
+
+<!-- EDYCJA -->
+<div id="edycja" class="card">
   <h3>Edycja zawodnika</h3>
   <input id="e_imie"> <input id="e_nazwisko"> <input id="e_rocznik"> <input id="e_konkurencje">
-  <button class="green" onclick="zapiszEdycje()">💾 ZAPISZ</button>
+  <button class="btn-big green" onclick="zapiszEdycje()">💾 Zapisz</button>
 </div>
 
-<div id="sekcja-nowy" class="card" style="display:none;">
-  <h3>Nowy zawodnik</h3>
-  <input id="imie" placeholder="Imię"> <input id="nazwisko" placeholder="Nazwisko"> <input id="rocznik" placeholder="Rocznik"> <input id="konkurencje" placeholder="Konkurencje">
-  <button class="green" onclick="dodaj()">DODAJ</button>
+<!-- NOWY ZAWODNIK -->
+<div id="sekcja-nowy" class="card">
+  <h3>➕ Nowy zawodnik</h3>
+  <input id="imie" placeholder="Imię">
+  <input id="nazwisko" placeholder="Nazwisko">
+  <input id="rocznik" placeholder="Rocznik">
+  <input id="konkurencje" placeholder="Konkurencje">
+  <button class="btn-big green" onclick="dodaj()">Dodaj teraz</button>
+  <button class="btn-big gray" onclick="ukryjWszystko()">Wróć</button>
 </div>
 
-<div id="sekcja-szukaj" class="card" style="display:none;">
-  <h3>Wyszukiwarka</h3>
+<!-- SZUKAJ -->
+<div id="sekcja-szukaj" class="card">
+  <h3>🔍 Szukaj</h3>
   <p>Opcja dummy...</p>
+  <button class="btn-big gray" onclick="ukryjWszystko()">Wróć</button>
 </div>
 
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbyCa1bGgo4CarwRp3JjYYwML3SQghse-MvQxEjByvlXj8SLP5eXrPC-NZduQizwLgMx/exec";
 let currentId = null;
-let scanner = null;
+let html5QrCode = null;
 
-function pokazSekcje(id) {
-  // Ukryj wszystko i zatrzymaj skaner
-  if (scanner) { scanner.stop().catch(() => {}); }
+function ukryjWszystko() {
   document.querySelectorAll('.card').forEach(c => c.style.display = 'none');
-  document.getElementById('reader').innerHTML = "";
-  
-  document.getElementById(id).style.display = 'block';
+  // Nie czyścimy #reader, żeby nie psuć biblioteki
 }
 
+function pokazSekcje(id) {
+  ukryjWszystko();
+  document.getElementById(id).style.display = 'block';
+  if (html5QrCode && html5QrCode.isScanning) {
+     html5QrCode.stop();
+  }
+}
+
+// TWOJA ORYGINALNA FUNKCJA SKANOWANIA (Lekko poprawiona)
 function startScan() {
-  // Resetuj widoki
-  pokazSekcje('reader-container'); 
-  document.getElementById('reader').innerHTML = ""; // Czyść div
-
-  scanner = new Html5Qrcode("reader");
+  ukryjWszystko();
   
-  const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+  if (!html5QrCode) {
+    html5QrCode = new Html5Qrcode("reader");
+  }
 
-  scanner.start({ facingMode: "environment" }, config, onScanSuccess)
-    .catch(err => alert("Błąd kamery: " + err));
+  html5QrCode.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: 250 },
+    onScanSuccess
+  ).catch(err => {
+      console.error(err);
+      alert("Kamera nie ruszyła. Odśwież stronę.");
+  });
 }
 
 function onScanSuccess(id) {
-  scanner.stop().then(() => {
-    document.getElementById('reader').innerHTML = "";
+  html5QrCode.stop().then(() => {
     fetch(API_URL + "?id=" + id)
       .then(res => res.text())
       .then(text => {
         if (text === "NOT_FOUND") { alert("Nie znaleziono"); return; }
         const d = JSON.parse(text);
         currentId = d.id;
-        
+
         const z = document.getElementById("zawodnik");
         z.style.display = "block";
         z.innerHTML = `
           <h3>${d.imie} ${d.nazwisko}</h3>
           Nr: ${d.nr_startowy || "-"}<br><br>
-          <button class="green" onclick="checkin()">✔ WYDAJ PAKIET</button>
-          <button class="orange" onclick="document.getElementById('edycja').style.display='block'">✏️ EDYTUJ</button>
+          <button class="btn-big green" onclick="checkin()">✔ WYDAJ PAKIET</button>
+          <button class="btn-big orange" onclick="document.getElementById('edycja').style.display='block'">✏️ EDYTUJ</button>
         `;
         document.getElementById("e_imie").value = d.imie;
         document.getElementById("e_nazwisko").value = d.nazwisko;
@@ -122,21 +137,21 @@ function onScanSuccess(id) {
   });
 }
 
-// Reszta Twoich funkcji bez zmian logicznych
+// POZOSTAŁE FUNKCJE
 function checkin() {
   fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "checkin", id: currentId }) })
-  .then(() => alert("✅ Wydano"));
+  .then(() => { alert("✅ Wydano"); ukryjWszystko(); });
 }
 
 function zapiszEdycje() {
   fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "edit", id: currentId, imie: document.getElementById("e_imie").value, nazwisko: document.getElementById("e_nazwisko").value, rocznik: document.getElementById("e_rocznik").value, konkurencje: document.getElementById("e_konkurencje").value }) })
-  .then(() => { alert("💾 Zapisano"); document.getElementById("edycja").style.display="none"; });
+  .then(() => { alert("💾 Zapisano"); ukryjWszystko(); });
 }
 
 function dodaj() {
   fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "add", imie: document.getElementById("imie").value, nazwisko: document.getElementById("nazwisko").value, rocznik: document.getElementById("rocznik").value, konkurencje: document.getElementById("konkurencje").value }) })
   .then(res => res.json())
-  .then(data => { alert("Dodano!"); document.getElementById("sekcja-nowy").style.display="none"; });
+  .then(data => { alert("Dodano!"); ukryjWszystko(); });
 }
 </script>
 </body>
