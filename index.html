@@ -44,104 +44,174 @@
         .modal-header h3 { margin: 0; }
         .close-modal { background: none; color: #666; font-size: 24px; padding: 0; margin: 0; width: 30px; height: 30px; }
         .close-modal:hover { background: none; color: #000; }
+        
+        /* Overlay logowania */
+        #loginOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10001;
+        }
+        #loginOverlay .login-box {
+            background: white;
+            padding: 30px;
+            border-radius: 32px;
+            max-width: 320px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        
+        /* Główna zawartość - początkowo ukryta */
+        #mainContent {
+            display: none;
+        }
+        
         @media (max-width: 500px) { .container { padding: 16px; } }
     </style>
 </head>
 <body>
-<!-- Overlay logowania -->
-<div id="loginOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; justify-content: center; align-items: center; z-index: 10000;">
-    <div style="background: white; padding: 30px; border-radius: 32px; max-width: 320px; width: 90%; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
-        <div style="font-size: 48px; margin-bottom: 15px;">🔐</div>
-        <h2 style="margin-bottom: 20px;">Dostęp chroniony</h2>
-        <p style="color: #666; margin-bottom: 15px; font-size: 14px;">Wprowadź hasło aby uzyskać dostęp</p>
-        <input type="password" id="passwordInput" placeholder="Hasło" style="width: 100%; padding: 12px; border-radius: 40px; border: 1px solid #cbd5e1; font-size: 1rem; margin-bottom: 15px;">
-        <button id="loginBtn" style="background: #10b981; width: 100%;">Zaloguj</button>
-        <div id="loginError" style="color: #ef4444; margin-top: 15px; font-size: 14px; display: none;">❌ Nieprawidłowe hasło</div>
-    </div>
-</div>
-<div class="container" id="app">
-    <h1><span>📦</span> <span>Odbiór pakietów</span></h1>
-    <div class="sub">Zarządzanie zawodnikami i odbiorem pakietów</div>
-
-    <div class="scan-area">
-        <div id="reader"></div>
-        <div style="margin-top: 12px; display: flex; flex-wrap: wrap; justify-content: center;">
-            <button id="startScanBtn" class="secondary">📷 Uruchom skaner</button>
-            <button id="stopScanBtn" style="display:none;" class="danger">⏹️ Zatrzymaj</button>
-            <button id="openAddModalBtn" class="info">➕ Nowy zawodnik</button>
-        </div>
-        <p style="font-size:13px; margin-top:12px;">lub wpisz ID ręcznie:</p>
-        <div style="display: flex; gap: 8px;">
-            <input type="text" id="manualId" placeholder="np. 123" style="flex: 1;">
-            <button id="manualSearchBtn">🔍 Szukaj</button>
-        </div>
-        
-        <hr style="margin: 15px 0;">
-        <p style="font-size:13px; font-weight: bold; margin-bottom: 8px;">🔍 Szukaj po nazwisku:</p>
-        <div style="display: flex; gap: 8px;">
-            <input type="text" id="searchNazwisko" placeholder="Wpisz nazwisko" style="flex: 1;">
-            <button id="searchByNazwiskoBtn">🔎 Szukaj</button>
-        </div>
-        <div id="searchResults" style="display:none; margin-top: 15px; background: white; border-radius: 16px; padding: 12px; max-height: 250px; overflow-y: auto;">
-            <div id="resultsList"></div>
+    <!-- Overlay logowania -->
+    <div id="loginOverlay">
+        <div class="login-box">
+            <div style="font-size: 48px; margin-bottom: 15px;">🔐</div>
+            <h2 style="margin-bottom: 20px;">Dostęp chroniony</h2>
+            <p style="color: #666; margin-bottom: 15px; font-size: 14px;">Wprowadź hasło aby uzyskać dostęp</p>
+            <input type="password" id="passwordInput" placeholder="Hasło" style="width: 100%; padding: 12px; border-radius: 40px; border: 1px solid #cbd5e1; font-size: 1rem; margin-bottom: 15px;">
+            <button id="loginBtn" style="background: #10b981; width: 100%;">Zaloguj</button>
+            <div id="loginError" style="color: #ef4444; margin-top: 15px; font-size: 14px; display: none;">❌ Nieprawidłowe hasło</div>
         </div>
     </div>
 
-    <div id="resultPanel" style="display:none;">
-        <div class="card">
-            <h3>🏃 Dane zawodnika</h3>
-            <div id="playerInfo"></div>
-            <div class="package-btn-container">
-                <button id="confirmPackageBtn" class="warning">✅ Potwierdź odbiór pakietu</button>
+    <!-- Główna zawartość aplikacji -->
+    <div id="mainContent">
+        <div class="container" id="app">
+            <h1><span>📦</span> <span>Odbiór pakietów</span></h1>
+            <div class="sub">Zarządzanie zawodnikami i odbiorem pakietów</div>
+
+            <div class="scan-area">
+                <div id="reader"></div>
+                <div style="margin-top: 12px; display: flex; flex-wrap: wrap; justify-content: center;">
+                    <button id="startScanBtn" class="secondary">📷 Uruchom skaner</button>
+                    <button id="stopScanBtn" style="display:none;" class="danger">⏹️ Zatrzymaj</button>
+                    <button id="openAddModalBtn" class="info">➕ Nowy zawodnik</button>
+                </div>
+                <p style="font-size:13px; margin-top:12px;">lub wpisz ID ręcznie:</p>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="manualId" placeholder="np. 123" style="flex: 1;">
+                    <button id="manualSearchBtn">🔍 Szukaj</button>
+                </div>
+                
+                <hr style="margin: 15px 0;">
+                <p style="font-size:13px; font-weight: bold; margin-bottom: 8px;">🔍 Szukaj po nazwisku:</p>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="searchNazwisko" placeholder="Wpisz nazwisko" style="flex: 1;">
+                    <button id="searchByNazwiskoBtn">🔎 Szukaj</button>
+                </div>
+                <div id="searchResults" style="display:none; margin-top: 15px; background: white; border-radius: 16px; padding: 12px; max-height: 250px; overflow-y: auto;">
+                    <div id="resultsList"></div>
+                </div>
             </div>
-            <hr>
-            <div class="edit-group">
-                <h4>✏️ Edycja danych</h4>
-                <div class="info-row"><span class="info-label">Imię:</span><input type="text" id="editImie" placeholder="Imię"></div>
-                <div class="info-row"><span class="info-label">Nazwisko:</span><input type="text" id="editNazwisko" placeholder="Nazwisko"></div>
-                <div class="info-row"><span class="info-label">Rocznik:</span><input type="number" id="editRocznik" placeholder="Rocznik" step="1"></div>
-                <div class="info-row"><span class="info-label">Konkurencja 1:</span><select id="editKonk1"></select></div>
-                <div class="info-row"><span class="info-label">Konkurencja 2:</span><select id="editKonk2"></select></div>
-                <div class="info-row"><span class="info-label">Numer startowy:</span><input type="number" id="editNrStartowy" placeholder="Numer startowy" step="1"></div>
+
+            <div id="resultPanel" style="display:none;">
+                <div class="card">
+                    <h3>🏃 Dane zawodnika</h3>
+                    <div id="playerInfo"></div>
+                    <div class="package-btn-container">
+                        <button id="confirmPackageBtn" class="warning">✅ Potwierdź odbiór pakietu</button>
+                    </div>
+                    <hr>
+                    <div class="edit-group">
+                        <h4>✏️ Edycja danych</h4>
+                        <div class="info-row"><span class="info-label">Imię:</span><input type="text" id="editImie" placeholder="Imię"></div>
+                        <div class="info-row"><span class="info-label">Nazwisko:</span><input type="text" id="editNazwisko" placeholder="Nazwisko"></div>
+                        <div class="info-row"><span class="info-label">Rocznik:</span><input type="number" id="editRocznik" placeholder="Rocznik" step="1"></div>
+                        <div class="info-row"><span class="info-label">Konkurencja 1:</span><select id="editKonk1"></select></div>
+                        <div class="info-row"><span class="info-label">Konkurencja 2:</span><select id="editKonk2"></select></div>
+                        <div class="info-row"><span class="info-label">Numer startowy:</span><input type="number" id="editNrStartowy" placeholder="Numer startowy" step="1"></div>
+                    </div>
+                    <div class="flex-btns">
+                        <button id="saveEditBtn" class="success">💾 Zapisz zmiany</button>
+                        <button id="clearBtn" class="secondary">🔄 Wróć do skanowania</button>
+                    </div>
+                </div>
             </div>
-            <div class="flex-btns">
-                <button id="saveEditBtn" class="success">💾 Zapisz zmiany</button>
-                <button id="clearBtn" class="secondary">🔄 Wróć do skanowania</button>
+            
+            <div id="debugPanel" class="debug-info">
+                <strong>Debug:</strong> <span id="debugMsg">Gotowy</span>
+            </div>
+            <footer style="font-size: 0.7rem; text-align: center; margin-top: 16px; color: #666;">Skieruj aparat na kod QR</footer>
+        </div>
+    </div>
+
+    <!-- Modal do dodawania nowego zawodnika -->
+    <div id="addModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>➕ Dodaj nowego zawodnika</h3>
+                <button class="close-modal" onclick="closeAddModal()">✖</button>
+            </div>
+            <div class="info-row"><span class="info-label">Imię:</span><input type="text" id="newImie" placeholder="Imię"></div>
+            <div class="info-row"><span class="info-label">Nazwisko:</span><input type="text" id="newNazwisko" placeholder="Nazwisko"></div>
+            <div class="info-row"><span class="info-label">Rocznik:</span><input type="number" id="newRocznik" placeholder="Rocznik" step="1"></div>
+            <div class="info-row"><span class="info-label">Konkurencja 1:</span><select id="newKonk1"></select></div>
+            <div class="info-row"><span class="info-label">Konkurencja 2:</span><select id="newKonk2"></select></div>
+            <div class="info-row"><span class="info-label">Numer startowy:</span><input type="number" id="newNrStartowy" placeholder="Numer startowy" step="1"></div>
+            <div class="flex-btns" style="margin-top: 20px;">
+                <button id="saveNewBtn" class="success">💾 Zapisz nowego zawodnika</button>
+                <button onclick="closeAddModal()" class="secondary">Anuluj</button>
             </div>
         </div>
     </div>
+
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+    <script>
+    // ==================== AUTORYZACJA ====================
+    const APP_PASSWORD = 'biuro2024'; // 🔑 ZMIEŃ TO HASŁO NA SWOJE!
     
-    <div id="debugPanel" class="debug-info">
-        <strong>Debug:</strong> <span id="debugMsg">Gotowy</span>
-    </div>
-    <footer style="font-size: 0.7rem; text-align: center; margin-top: 16px; color: #666;">Skieruj aparat na kod QR</footer>
-</div>
-
-<!-- Modal do dodawania nowego zawodnika -->
-<div id="addModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>➕ Dodaj nowego zawodnika</h3>
-            <button class="close-modal" onclick="closeAddModal()">✖</button>
-        </div>
-        <div class="info-row"><span class="info-label">Imię:</span><input type="text" id="newImie" placeholder="Imię"></div>
-        <div class="info-row"><span class="info-label">Nazwisko:</span><input type="text" id="newNazwisko" placeholder="Nazwisko"></div>
-        <div class="info-row"><span class="info-label">Rocznik:</span><input type="number" id="newRocznik" placeholder="Rocznik" step="1"></div>
-        <div class="info-row"><span class="info-label">Konkurencja 1:</span><select id="newKonk1"></select></div>
-        <div class="info-row"><span class="info-label">Konkurencja 2:</span><select id="newKonk2"></select></div>
-        <div class="info-row"><span class="info-label">Numer startowy:</span><input type="number" id="newNrStartowy" placeholder="Numer startowy" step="1"></div>
-        <div class="flex-btns" style="margin-top: 20px;">
-            <button id="saveNewBtn" class="success">💾 Zapisz nowego zawodnika</button>
-            <button onclick="closeAddModal()" class="secondary">Anuluj</button>
-        </div>
-    </div>
-</div>
-
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-
-<script>
+    // ==================== GŁÓWNA INICJALIZACJA ====================
+    function initializeApp() {
+        setDebug('✅ Inicjalizacja aplikacji...');
+        loadKonkurencje();
+        setDebug('✅ Aplikacja gotowa!');
+    }
+    
+    function login() {
+        const password = document.getElementById('passwordInput').value;
+        if (password === APP_PASSWORD) {
+            sessionStorage.setItem('loggedIn', 'true');
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+            initializeApp();
+        } else {
+            document.getElementById('loginError').style.display = 'block';
+        }
+    }
+    
+    // Sprawdź czy użytkownik jest już zalogowany
+    if (sessionStorage.getItem('loggedIn') === 'true') {
+        document.getElementById('loginOverlay').style.display = 'none';
+        document.getElementById('mainContent').style.display = 'block';
+    } else {
+        document.getElementById('loginOverlay').style.display = 'flex';
+        document.getElementById('mainContent').style.display = 'none';
+    }
+    
+    // Obsługa przycisku logowania
+    document.getElementById('loginBtn').addEventListener('click', login);
+    document.getElementById('passwordInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') login();
+    });
+    
     // ==================== KONFIGURACJA ====================
-    const API_URL = 'https://script.google.com/macros/s/AKfycbzefvaEHEVOSkogq2HjemmOAluIFhVqmnZvmvt1pB8clSlQqcZVyYmFOjZ9jwwL4ZQ9/exec';
+    const API_URL = 'https://script.google.com/macros/s/TWÓJ_URL/exec'; // 🔁 PODMIEŃ NA SWÓJ URL!
     
     let konkurencjeList = [];
     let currentRowIndex = null;
@@ -176,7 +246,27 @@
     const searchResults = document.getElementById('searchResults');
     const resultsList = document.getElementById('resultsList');
     
-    // ==================== POBRANIE LISTY KONKURENCJI ====================
+    // ==================== FUNKCJE ====================
+    function setDebug(msg) {
+        const timestamp = new Date().toLocaleTimeString();
+        debugMsg.innerHTML = `[${timestamp}] ${msg}<br>${debugMsg.innerHTML}`;
+        if(debugMsg.innerHTML.split('<br>').length > 15) {
+            debugMsg.innerHTML = debugMsg.innerHTML.split('<br>').slice(0, 15).join('<br>');
+        }
+        console.log(msg);
+    }
+    
+    function showAlert(msg, isError = true) {
+        const oldAlert = document.querySelector('.alert');
+        if(oldAlert) oldAlert.remove();
+        const alertDiv = document.createElement('div');
+        alertDiv.className = isError ? 'alert' : 'alert alert-success';
+        alertDiv.innerText = msg;
+        const app = document.getElementById('app');
+        if (app) app.insertBefore(alertDiv, resultPanel);
+        setTimeout(() => alertDiv.remove(), 4000);
+    }
+    
     async function loadKonkurencje() {
         try {
             const response = await fetch(`${API_URL}?get=konkurencje&t=${Date.now()}`);
@@ -206,25 +296,6 @@
             oscillator.start();
             setTimeout(() => { oscillator.stop(); audioCtx.close(); }, 200);
         } catch(e) { console.log('Dźwięk nie jest wspierany:', e); }
-    }
-    
-    function showAlert(msg, isError = true) {
-        const oldAlert = document.querySelector('.alert');
-        if(oldAlert) oldAlert.remove();
-        const alertDiv = document.createElement('div');
-        alertDiv.className = isError ? 'alert' : 'alert alert-success';
-        alertDiv.innerText = msg;
-        document.getElementById('app').insertBefore(alertDiv, resultPanel);
-        setTimeout(() => alertDiv.remove(), 4000);
-    }
-    
-    function setDebug(msg) {
-        const timestamp = new Date().toLocaleTimeString();
-        debugMsg.innerHTML = `[${timestamp}] ${msg}<br>${debugMsg.innerHTML}`;
-        if(debugMsg.innerHTML.split('<br>').length > 15) {
-            debugMsg.innerHTML = debugMsg.innerHTML.split('<br>').slice(0, 15).join('<br>');
-        }
-        console.log(msg);
     }
     
     async function fetchPlayerById(id) {
@@ -267,8 +338,6 @@
         }
     }
     
-    // ==================== DODAWANIE NOWEGO ZAWODNIKA ====================
-    // ==================== DODAWANIE NOWEGO ZAWODNIKA ====================
     async function addNewZawodnik() {
         const imie = document.getElementById('newImie').value.trim();
         const nazwisko = document.getElementById('newNazwisko').value.trim();
@@ -284,7 +353,6 @@
         
         setDebug(`Dodawanie nowego zawodnika: ${imie} ${nazwisko}`);
         
-        // Buduj URL z parametrami
         const params = new URLSearchParams();
         params.append('action', 'add');
         params.append('imie', imie);
@@ -296,7 +364,6 @@
         params.append('t', Date.now());
         
         const url = `${API_URL}?${params.toString()}`;
-        setDebug(`📤 Wysyłam: ${url.substring(0, 200)}...`);
         
         try {
             const response = await fetch(url);
@@ -304,33 +371,15 @@
             setDebug(`📥 Odpowiedź: ${text}`);
             
             let result;
-            try {
-                result = JSON.parse(text);
-            } catch(e) {
-                setDebug(`❌ Błąd parsowania: ${text}`);
-                throw new Error('Nieprawidłowa odpowiedź z serwera');
-            }
+            try { result = JSON.parse(text); } catch(e) { throw new Error('Nieprawidłowa odpowiedź'); }
             
             if (result.success) {
-                showAlert(`✅ Dodano zawodnika! Nowe ID: ${result.newId}. Pakiet oznaczony jako odebrany.`, false);
-                setDebug(`✅ Dodano zawodnika ID: ${result.newId}`);
-                
-                // Wyczyść formularz
-                document.getElementById('newImie').value = '';
-                document.getElementById('newNazwisko').value = '';
-                document.getElementById('newRocznik').value = '';
-                document.getElementById('newKonk1').value = '';
-                document.getElementById('newKonk2').value = '';
-                document.getElementById('newNrStartowy').value = '';
-                
-                // Zamknij modal
+                showAlert(`✅ Dodano zawodnika! Nowe ID: ${result.newId}. Pakiet odebrany.`, false);
+                clearAddForm();
                 closeAddModal();
-                
-                // Automatycznie wczytaj nowego zawodnika
                 handleIdFound(result.newId);
             } else {
                 showAlert(`❌ Błąd: ${result.error}`);
-                setDebug(`❌ Błąd dodawania: ${result.error}`);
             }
         } catch(err) {
             setDebug(`❌ Błąd: ${err.message}`);
@@ -350,7 +399,6 @@
     function openAddModal() { document.getElementById('addModal').style.display = 'flex'; }
     function closeAddModal() { document.getElementById('addModal').style.display = 'none'; }
     
-    // ==================== WYSZUKIWANIE PO NAZWISKU ====================
     async function searchByNazwisko() {
         const nazwisko = searchNazwisko.value.trim();
         if (!nazwisko) { showAlert("Wprowadź nazwisko"); return; }
@@ -487,26 +535,24 @@
         setDebug('Skaner zatrzymany');
     }
     
-    // Event listeners
-    startScanBtn.addEventListener('click', startScanner);
-    stopScanBtn.addEventListener('click', stopScanner);
-    manualSearchBtn.addEventListener('click', () => { const id = manualIdInput.value.trim(); if(id) handleIdFound(id); else showAlert("Wprowadź ID"); });
-    saveEditBtn.addEventListener('click', saveEdits);
-    confirmPackageBtn.addEventListener('click', confirmPackage);
-    clearBtn.addEventListener('click', clearPanel);
-    searchByNazwiskoBtn.addEventListener('click', searchByNazwisko);
-    searchNazwisko.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchByNazwisko(); });
-    openAddModalBtn.addEventListener('click', openAddModal);
-    saveNewBtn.addEventListener('click', addNewZawodnik);
+    // Event listeners (tylko jeśli elementy istnieją)
+    if (startScanBtn) startScanBtn.addEventListener('click', startScanner);
+    if (stopScanBtn) stopScanBtn.addEventListener('click', stopScanner);
+    if (manualSearchBtn) manualSearchBtn.addEventListener('click', () => { const id = manualIdInput.value.trim(); if(id) handleIdFound(id); else showAlert("Wprowadź ID"); });
+    if (saveEditBtn) saveEditBtn.addEventListener('click', saveEdits);
+    if (confirmPackageBtn) confirmPackageBtn.addEventListener('click', confirmPackage);
+    if (clearBtn) clearBtn.addEventListener('click', clearPanel);
+    if (searchByNazwiskoBtn) searchByNazwiskoBtn.addEventListener('click', searchByNazwisko);
+    if (searchNazwisko) searchNazwisko.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchByNazwisko(); });
+    if (openAddModalBtn) openAddModalBtn.addEventListener('click', openAddModal);
+    if (saveNewBtn) saveNewBtn.addEventListener('click', addNewZawodnik);
     window.addEventListener('click', (e) => { if (e.target === document.getElementById('addModal')) closeAddModal(); });
     
-    loadKonkurencje();
-    
     if (API_URL === 'https://script.google.com/macros/s/TWÓJ_URL/exec') {
-        showAlert('⚠️ UWAGA: Musisz zmienić API_URL na swój adres z Apps Script!', true);
-        setDebug('⚠️ API_URL nie został skonfigurowany!');
-    } else { setDebug(`✅ API_URL skonfigurowany`); }
-    setDebug('✅ Aplikacja gotowa!');
-</script>
+        console.warn('⚠️ UWAGA: Musisz zmienić API_URL na swój adres z Apps Script!');
+    } else {
+        setDebug(`✅ API_URL skonfigurowany`);
+    }
+    </script>
 </body>
 </html>
