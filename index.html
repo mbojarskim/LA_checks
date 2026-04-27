@@ -21,16 +21,18 @@
         button.danger { background: #ef4444; }
         button.info { background: #06b6d4; }
         .card { background: #f1f5f9; border-radius: 24px; padding: 20px; margin: 20px 0; }
-        .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e2e8f0; }
-        .info-label { font-weight: 600; color: #334155; }
+        .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e2e8f0; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .info-label { font-weight: 600; color: #334155; min-width: 120px; }
         .info-value { font-weight: 500; color: #0f172a; }
         .package-status { background: #e6f7e6; border-radius: 40px; padding: 8px 16px; display: inline-block; font-weight: bold; color: #2e7d32; }
         .package-absent { background: #ffe6e6; color: #c62828; }
+        .resign-status-true { background: #fee2e2; border-radius: 40px; padding: 8px 16px; display: inline-block; font-weight: bold; color: #c62828; }
+        .resign-status-false { background: #e6f7e6; border-radius: 40px; padding: 8px 16px; display: inline-block; font-weight: bold; color: #2e7d32; }
         .edit-group { margin: 16px 0; }
         input, select, textarea { width: 100%; padding: 12px; border-radius: 20px; border: 1px solid #cbd5e1; font-size: 1rem; margin-top: 4px; }
         input[type="number"] { -moz-appearance: textfield; }
         .flex-btns { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 20px; }
-        .package-btn-container { display: flex; justify-content: center; margin: 20px 0 10px 0; }
+        .package-btn-container { display: flex; justify-content: center; margin: 20px 0 10px 0; gap: 12px; flex-wrap: wrap; }
         .package-btn-container button { min-width: 200px; font-size: 1.1rem; padding: 14px 24px; }
         .alert { padding: 12px; border-radius: 28px; background: #fee2e2; color: #b91c1c; text-align: center; margin: 16px 0; }
         .alert-success { background: #e6f7e6; color: #2e7d32; }
@@ -44,8 +46,14 @@
         .modal-header h3 { margin: 0; }
         .close-modal { background: none; color: #666; font-size: 24px; padding: 0; margin: 0; width: 30px; height: 30px; }
         .close-modal:hover { background: none; color: #000; }
+        .toggle-group { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+        .toggle-btn { background: #e2e8f0; color: #334155; padding: 8px 20px; border-radius: 40px; cursor: pointer; margin: 0; }
+        .toggle-btn.active { background: #3b82f6; color: white; }
+        .toggle-btn.M.active { background: #3b82f6; }
+        .toggle-btn.K.active { background: #ec489a; }
+        .checkbox-wrapper { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        .checkbox-wrapper input { width: 24px; height: 24px; margin: 0; cursor: pointer; }
         
-        /* Overlay logowania */
         #loginOverlay {
             position: fixed;
             top: 0;
@@ -67,12 +75,9 @@
             text-align: center;
             box-shadow: 0 10px 40px rgba(0,0,0,0.3);
         }
-        
-        /* Główna zawartość - początkowo ukryta */
         #mainContent {
             display: none;
         }
-        
         @media (max-width: 500px) { .container { padding: 16px; } }
     </style>
 </head>
@@ -123,19 +128,56 @@
                 <div class="card">
                     <h3>🏃 Dane zawodnika</h3>
                     <div id="playerInfo"></div>
+                    
                     <div class="package-btn-container">
                         <button id="confirmPackageBtn" class="warning">✅ Potwierdź odbiór pakietu</button>
+                        <button id="toggleResignBtn" class="danger">❌ Zarejestruj rezygnację</button>
                     </div>
+                    
                     <hr>
+                    
                     <div class="edit-group">
                         <h4>✏️ Edycja danych</h4>
-                        <div class="info-row"><span class="info-label">Imię:</span><input type="text" id="editImie" placeholder="Imię"></div>
-                        <div class="info-row"><span class="info-label">Nazwisko:</span><input type="text" id="editNazwisko" placeholder="Nazwisko"></div>
-                        <div class="info-row"><span class="info-label">Rocznik:</span><input type="number" id="editRocznik" placeholder="Rocznik" step="1"></div>
-                        <div class="info-row"><span class="info-label">Konkurencja 1:</span><select id="editKonk1"></select></div>
-                        <div class="info-row"><span class="info-label">Konkurencja 2:</span><select id="editKonk2"></select></div>
-                        <div class="info-row"><span class="info-label">Numer startowy:</span><input type="number" id="editNrStartowy" placeholder="Numer startowy" step="1"></div>
+                        <div class="info-row">
+                            <span class="info-label">Imię:</span>
+                            <input type="text" id="editImie" placeholder="Imię">
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Nazwisko:</span>
+                            <input type="text" id="editNazwisko" placeholder="Nazwisko">
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Rocznik:</span>
+                            <input type="number" id="editRocznik" placeholder="Rocznik" step="1">
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Płeć:</span>
+                            <div class="toggle-group" id="editPlecGroup">
+                                <button type="button" class="toggle-btn M" data-plec="M">Mężczyzna</button>
+                                <button type="button" class="toggle-btn K" data-plec="K">Kobieta</button>
+                            </div>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Konkurencja 1:</span>
+                            <select id="editKonk1"></select>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Konkurencja 2:</span>
+                            <select id="editKonk2"></select>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Numer startowy:</span>
+                            <input type="number" id="editNrStartowy" placeholder="Numer startowy" step="1">
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Rezygnacja:</span>
+                            <div class="checkbox-wrapper">
+                                <input type="checkbox" id="editRezygnacja" style="width: 24px; height: 24px;">
+                                <span>Zaznacz jeśli zawodnik zrezygnował</span>
+                            </div>
+                        </div>
                     </div>
+                    
                     <div class="flex-btns">
                         <button id="saveEditBtn" class="success">💾 Zapisz zmiany</button>
                         <button id="clearBtn" class="secondary">🔄 Wróć do skanowania</button>
@@ -160,6 +202,13 @@
             <div class="info-row"><span class="info-label">Imię:</span><input type="text" id="newImie" placeholder="Imię"></div>
             <div class="info-row"><span class="info-label">Nazwisko:</span><input type="text" id="newNazwisko" placeholder="Nazwisko"></div>
             <div class="info-row"><span class="info-label">Rocznik:</span><input type="number" id="newRocznik" placeholder="Rocznik" step="1"></div>
+            <div class="info-row">
+                <span class="info-label">Płeć:</span>
+                <div class="toggle-group" id="newPlecGroup">
+                    <button type="button" class="toggle-btn M" data-plec="M">Mężczyzna</button>
+                    <button type="button" class="toggle-btn K" data-plec="K">Kobieta</button>
+                </div>
+            </div>
             <div class="info-row"><span class="info-label">Konkurencja 1:</span><select id="newKonk1"></select></div>
             <div class="info-row"><span class="info-label">Konkurencja 2:</span><select id="newKonk2"></select></div>
             <div class="info-row"><span class="info-label">Numer startowy:</span><input type="number" id="newNrStartowy" placeholder="Numer startowy" step="1"></div>
@@ -174,12 +223,12 @@
 
     <script>
     // ==================== AUTORYZACJA ====================
-    const APP_PASSWORD = 'biuro2024'; // 🔑 ZMIEŃ TO HASŁO NA SWOJE!
+    const APP_PASSWORD = 'biuro2024';
     
-    // ==================== GŁÓWNA INICJALIZACJA ====================
     function initializeApp() {
         setDebug('✅ Inicjalizacja aplikacji...');
         loadKonkurencje();
+        setupPlecToggles();
         setDebug('✅ Aplikacja gotowa!');
     }
     
@@ -195,7 +244,6 @@
         }
     }
     
-    // Sprawdź czy użytkownik jest już zalogowany
     if (sessionStorage.getItem('loggedIn') === 'true') {
         document.getElementById('loginOverlay').style.display = 'none';
         document.getElementById('mainContent').style.display = 'block';
@@ -204,20 +252,20 @@
         document.getElementById('mainContent').style.display = 'none';
     }
     
-    // Obsługa przycisku logowania
     document.getElementById('loginBtn').addEventListener('click', login);
     document.getElementById('passwordInput').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') login();
     });
     
     // ==================== KONFIGURACJA ====================
-    const API_URL = 'https://script.google.com/macros/s/TWÓJ_URL/exec'; // 🔁 PODMIEŃ NA SWÓJ URL!
+    const API_URL = 'https://script.google.com/macros/s/TWÓJ_URL/exec';
     
     let konkurencjeList = [];
     let currentRowIndex = null;
     let currentPlayerData = null;
     let html5QrCode = null;
     let isScanning = false;
+    let currentPlec = '';
     
     // Elementy DOM
     const resultPanel = document.getElementById('resultPanel');
@@ -230,12 +278,14 @@
     const editKonk1 = document.getElementById('editKonk1');
     const editKonk2 = document.getElementById('editKonk2');
     const editNrStartowy = document.getElementById('editNrStartowy');
+    const editRezygnacja = document.getElementById('editRezygnacja');
     
     const startScanBtn = document.getElementById('startScanBtn');
     const stopScanBtn = document.getElementById('stopScanBtn');
     const manualSearchBtn = document.getElementById('manualSearchBtn');
     const saveEditBtn = document.getElementById('saveEditBtn');
     const confirmPackageBtn = document.getElementById('confirmPackageBtn');
+    const toggleResignBtn = document.getElementById('toggleResignBtn');
     const clearBtn = document.getElementById('clearBtn');
     const manualIdInput = document.getElementById('manualId');
     const openAddModalBtn = document.getElementById('openAddModalBtn');
@@ -246,7 +296,52 @@
     const searchResults = document.getElementById('searchResults');
     const resultsList = document.getElementById('resultsList');
     
-    // ==================== FUNKCJE ====================
+    // ==================== FUNKCJE POMOCNICZE ====================
+    function setupPlecToggles() {
+        // Dla edycji
+        const editGroup = document.getElementById('editPlecGroup');
+        if (editGroup) {
+            editGroup.querySelectorAll('.toggle-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    editGroup.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentPlec = this.getAttribute('data-plec');
+                });
+            });
+        }
+        
+        // Dla nowego zawodnika
+        const newGroup = document.getElementById('newPlecGroup');
+        if (newGroup) {
+            newGroup.querySelectorAll('.toggle-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    newGroup.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+        }
+    }
+    
+    function getSelectedPlec(containerId) {
+        const group = document.getElementById(containerId);
+        const active = group.querySelector('.toggle-btn.active');
+        return active ? active.getAttribute('data-plec') : '';
+    }
+    
+    function setPlecToggle(value) {
+        const editGroup = document.getElementById('editPlecGroup');
+        if (editGroup) {
+            editGroup.querySelectorAll('.toggle-btn').forEach(btn => {
+                if (btn.getAttribute('data-plec') === value) {
+                    btn.classList.add('active');
+                    currentPlec = value;
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+    }
+    
     function setDebug(msg) {
         const timestamp = new Date().toLocaleTimeString();
         debugMsg.innerHTML = `[${timestamp}] ${msg}<br>${debugMsg.innerHTML}`;
@@ -322,6 +417,7 @@
             for (let [key, value] of Object.entries(updatesObj)) params.append(key, value);
             params.append('t', Date.now());
             const url = `${API_URL}?${params.toString()}`;
+            setDebug(`📤 Aktualizacja: ${url.substring(0, 200)}`);
             const response = await fetch(url);
             const text = await response.text();
             const result = JSON.parse(text);
@@ -342,6 +438,7 @@
         const imie = document.getElementById('newImie').value.trim();
         const nazwisko = document.getElementById('newNazwisko').value.trim();
         const rocznik = document.getElementById('newRocznik').value.trim();
+        const plec = getSelectedPlec('newPlecGroup');
         const konkurencja1 = document.getElementById('newKonk1').value;
         const konkurencja2 = document.getElementById('newKonk2').value;
         const nrStartowy = document.getElementById('newNrStartowy').value.trim();
@@ -350,14 +447,19 @@
             showAlert("Imię i nazwisko są wymagane!");
             return;
         }
+        if (!plec) {
+            showAlert("Wybierz płeć!");
+            return;
+        }
         
-        setDebug(`Dodawanie nowego zawodnika: ${imie} ${nazwisko}`);
+        setDebug(`Dodawanie nowego zawodnika: ${imie} ${nazwisko}, płeć: ${plec}`);
         
         const params = new URLSearchParams();
         params.append('action', 'add');
         params.append('imie', imie);
         params.append('nazwisko', nazwisko);
         params.append('rocznik', rocznik);
+        params.append('plec', plec);
         params.append('konkurencja1', konkurencja1);
         params.append('konkurencja2', konkurencja2);
         params.append('nr_startowy', nrStartowy);
@@ -391,6 +493,7 @@
         document.getElementById('newImie').value = '';
         document.getElementById('newNazwisko').value = '';
         document.getElementById('newRocznik').value = '';
+        document.getElementById('newPlecGroup').querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
         document.getElementById('newKonk1').value = '';
         document.getElementById('newKonk2').value = '';
         document.getElementById('newNrStartowy').value = '';
@@ -415,9 +518,12 @@
             }
             resultsList.innerHTML = results.map(player => `
                 <div onclick="selectPlayer(${player.rowIndex}, '${player.ID}')" class="search-result-item">
-                    <div style="font-weight: bold;">${player.Imię} ${player.Nazwisko}</div>
+                    <div style="font-weight: bold;">${player.Imię} ${player.Nazwisko} ${player.Płeć ? '(' + player.Płeć + ')' : ''}</div>
                     <div style="font-size: 0.85rem; color: #666;">ID: ${player.ID} | Rocznik: ${player.Rocznik} | Nr startowy: ${player.Nr_startowy || 'brak'}</div>
-                    <div style="font-size: 0.85rem; margin-top: 4px;">${player.Pakiet_Odebrany === 'TAK' ? '<span style="color: #10b981;">✅ Pakiet odebrany</span>' : '<span style="color: #f97316;">⚠️ Pakiet nieodebrany</span>'}</div>
+                    <div style="font-size: 0.85rem; margin-top: 4px;">
+                        ${player.Pakiet_Odebrany === 'TAK' ? '<span style="color: #10b981;">✅ Pakiet odebrany</span>' : '<span style="color: #f97316;">⚠️ Pakiet nieodebrany</span>'}
+                        ${player.Rezygnacja === 'TRUE' ? ' | <span style="color: #c62828;">❌ Zrezygnował</span>' : ''}
+                    </div>
                 </div>
             `).join('');
         } catch(err) { setDebug(`❌ Błąd: ${err}`); resultsList.innerHTML = '<div style="text-align:center; padding: 20px; color: #c62828;">❌ Błąd połączenia</div>'; }
@@ -441,22 +547,33 @@
     function renderPlayerPanel(dataObj) {
         const d = dataObj.data;
         const isTaken = d.Pakiet_Odebrany === 'TAK';
+        const isResigned = d.Rezygnacja === 'TRUE';
+        
         playerInfoDiv.innerHTML = `
             <div class="info-row"><span class="info-label">ID:</span><span class="info-value">${d.ID || ''}</span></div>
             <div class="info-row"><span class="info-label">Imię i nazwisko:</span><span class="info-value">${d.Imię || ''} ${d.Nazwisko || ''}</span></div>
             <div class="info-row"><span class="info-label">Rocznik:</span><span class="info-value">${d.Rocznik || '—'}</span></div>
+            <div class="info-row"><span class="info-label">Płeć:</span><span class="info-value">${d.Płeć === 'M' ? 'Mężczyzna' : (d.Płeć === 'K' ? 'Kobieta' : '—')}</span></div>
             <div class="info-row"><span class="info-label">Konkurencje:</span><span class="info-value">${d.Konkurencja1 || '—'} ${d.Konkurencja2 ? '/ ' + d.Konkurencja2 : ''}</span></div>
             <div class="info-row"><span class="info-label">Numer startowy:</span><span class="info-value">${d.Nr_startowy || 'Nieprzydzielony'}</span></div>
             <div class="info-row"><span class="info-label">Status pakietu:</span><span class="package-status ${isTaken ? '' : 'package-absent'}">${isTaken ? '✅ ODEBRANY' : '❌ NIEODEBRANY'}</span></div>
+            <div class="info-row"><span class="info-label">Status rezygnacji:</span><span class="${isResigned ? 'resign-status-true' : 'resign-status-false'}">${isResigned ? '❌ ZREZYGNOWAŁ' : '✅ AKTYWNY'}</span></div>
         `;
+        
         confirmPackageBtn.style.opacity = isTaken ? '0.6' : '1';
         confirmPackageBtn.style.cursor = isTaken ? 'not-allowed' : 'pointer';
+        
+        toggleResignBtn.textContent = isResigned ? '🔄 Cofnij rezygnację' : '❌ Zarejestruj rezygnację';
+        toggleResignBtn.style.background = isResigned ? '#10b981' : '#ef4444';
+        
         editImie.value = d.Imię || '';
         editNazwisko.value = d.Nazwisko || '';
         editRocznik.value = d.Rocznik || '';
+        setPlecToggle(d.Płeć || '');
         if (d.Konkurencja1) editKonk1.value = d.Konkurencja1;
         if (d.Konkurencja2) editKonk2.value = d.Konkurencja2;
         editNrStartowy.value = d.Nr_startowy || '';
+        editRezygnacja.checked = isResigned;
     }
     
     async function handleIdFound(id) {
@@ -482,9 +599,14 @@
         if(editImie.value !== (currentPlayerData?.Imię || '')) updates.Imię = editImie.value;
         if(editNazwisko.value !== (currentPlayerData?.Nazwisko || '')) updates.Nazwisko = editNazwisko.value;
         if(editRocznik.value !== (currentPlayerData?.Rocznik || '')) updates.Rocznik = editRocznik.value;
+        if(currentPlec !== (currentPlayerData?.Płeć || '')) updates.Płeć = currentPlec;
         if(editKonk1.value !== (currentPlayerData?.Konkurencja1 || '')) updates.Konkurencja1 = editKonk1.value;
         if(editKonk2.value !== (currentPlayerData?.Konkurencja2 || '')) updates.Konkurencja2 = editKonk2.value;
         if(editNrStartowy.value !== (currentPlayerData?.Nr_startowy || '')) updates.Nr_startowy = editNrStartowy.value;
+        
+        const newRezygnacja = editRezygnacja.checked ? 'TRUE' : 'FALSE';
+        if(newRezygnacja !== (currentPlayerData?.Rezygnacja || 'FALSE')) updates.Rezygnacja = newRezygnacja;
+        
         if(Object.keys(updates).length === 0) { showAlert("Brak zmian", false); return; }
         if(await updatePlayer(updates) && currentPlayerData?.ID) {
             const refreshed = await fetchPlayerById(currentPlayerData.ID);
@@ -498,6 +620,20 @@
         if(await updatePlayer({ Pakiet_Odebrany: 'TAK' }) && currentPlayerData?.ID) {
             const refreshed = await fetchPlayerById(currentPlayerData.ID);
             if(refreshed?.success) { currentPlayerData = refreshed.data; renderPlayerPanel(refreshed); showAlert("✅ Pakiet oznaczony jako odebrany!", false); playBeep(); }
+        }
+    }
+    
+    async function toggleResign() {
+        if(!currentRowIndex) { showAlert("Nie ma aktywnego zawodnika"); return; }
+        const currentResign = currentPlayerData?.Rezygnacja === 'TRUE';
+        const newResign = !currentResign;
+        const action = newResign ? 'zarejestrować rezygnację' : 'cofnąć rezygnację';
+        
+        if(confirm(`Czy na pewno chcesz ${action} tego zawodnika?`)) {
+            if(await updatePlayer({ Rezygnacja: newResign ? 'TRUE' : 'FALSE' }) && currentPlayerData?.ID) {
+                const refreshed = await fetchPlayerById(currentPlayerData.ID);
+                if(refreshed?.success) { currentPlayerData = refreshed.data; renderPlayerPanel(refreshed); showAlert(`✅ ${newResign ? 'Zarejestrowano rezygnację' : 'Cofnięto rezygnację'}!`, false); playBeep(); }
+            }
         }
     }
     
@@ -535,12 +671,13 @@
         setDebug('Skaner zatrzymany');
     }
     
-    // Event listeners (tylko jeśli elementy istnieją)
+    // Event listeners
     if (startScanBtn) startScanBtn.addEventListener('click', startScanner);
     if (stopScanBtn) stopScanBtn.addEventListener('click', stopScanner);
     if (manualSearchBtn) manualSearchBtn.addEventListener('click', () => { const id = manualIdInput.value.trim(); if(id) handleIdFound(id); else showAlert("Wprowadź ID"); });
     if (saveEditBtn) saveEditBtn.addEventListener('click', saveEdits);
     if (confirmPackageBtn) confirmPackageBtn.addEventListener('click', confirmPackage);
+    if (toggleResignBtn) toggleResignBtn.addEventListener('click', toggleResign);
     if (clearBtn) clearBtn.addEventListener('click', clearPanel);
     if (searchByNazwiskoBtn) searchByNazwiskoBtn.addEventListener('click', searchByNazwisko);
     if (searchNazwisko) searchNazwisko.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchByNazwisko(); });
