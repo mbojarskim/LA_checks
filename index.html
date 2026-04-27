@@ -54,7 +54,6 @@
         .checkbox-wrapper { display: flex; align-items: center; gap: 10px; cursor: pointer; }
         .checkbox-wrapper input { width: 24px; height: 24px; margin: 0; cursor: pointer; }
         
-        /* Overlay logowania */
         #loginOverlay {
             position: fixed;
             top: 0;
@@ -206,9 +205,9 @@
 
     <script>
     // ==================== KONFIGURACJA ====================
-    const API_URL = 'https://script.google.com/macros/s/AKfycbzefvaEHEVOSkogq2HjemmOAluIFhVqmnZvmvt1pB8clSlQqcZVyYmFOjZ9jwwL4ZQ9/exec'; // 🔁 PODMIEŃ!
+    const API_URL = 'https://script.google.com/macros/s/TWÓJ_URL/exec'; // 🔁 PODMIEŃ!
     
-    let sessionToken = null;
+    let isLoggedIn = false;
     let konkurencjeList = [];
     let currentRowIndex = null;
     let currentPlayerData = null;
@@ -265,12 +264,6 @@
         setTimeout(() => alertDiv.remove(), 4000);
     }
     
-    function addSessionToUrl(url) {
-        if (!sessionToken) return url;
-        const separator = url.includes('?') ? '&' : '?';
-        return `${url}${separator}session=${sessionToken}`;
-    }
-    
     // ==================== LOGOWANIE ====================
     async function login() {
         const password = document.getElementById('passwordInput').value;
@@ -287,8 +280,9 @@
             const result = await response.json();
             
             if (result.success) {
-                // Ustaw token sesji (używamy hasła jako tokenu, ale nie przechowujemy w kodzie)
-                sessionToken = 'logged_in';
+                isLoggedIn = true;
+                // Zapisz informację o zalogowaniu w sessionStorage
+                sessionStorage.setItem('isLoggedIn', 'true');
                 document.getElementById('loginOverlay').style.display = 'none';
                 document.getElementById('mainContent').style.display = 'block';
                 initializeApp();
@@ -303,6 +297,14 @@
             document.getElementById('loginError').innerText = '❌ Błąd połączenia';
             setDebug(`❌ Błąd logowania: ${err.message}`);
         }
+    }
+    
+    // Sprawdź czy użytkownik był już zalogowany
+    if (sessionStorage.getItem('isLoggedIn') === 'true') {
+        isLoggedIn = true;
+        document.getElementById('loginOverlay').style.display = 'none';
+        document.getElementById('mainContent').style.display = 'block';
+        initializeApp();
     }
     
     // ==================== INICJALIZACJA APLIKACJI ====================
@@ -389,19 +391,18 @@
     }
     
     async function fetchPlayerById(id) {
+        if (!isLoggedIn) {
+            showAlert("❌ Nie jesteś zalogowany!");
+            return null;
+        }
+        
         try {
             setDebug(`Pobieranie ID: ${id}`);
-            let url = `${API_URL}?id=${encodeURIComponent(id)}&t=${Date.now()}`;
-            url = addSessionToUrl(url);
+            const url = `${API_URL}?id=${encodeURIComponent(id)}&t=${Date.now()}&logged_in=true`;
             const response = await fetch(url);
             const text = await response.text();
             setDebug(`Odpowiedź: ${text.substring(0, 150)}`);
-            const data = JSON.parse(text);
-            if (data.error && data.error.includes('autoryzacji')) {
-                showAlert("❌ Sesja wygasła - odśwież stronę i zaloguj ponownie!");
-                return null;
-            }
-            return data;
+            return JSON.parse(text);
         } catch(err) {
             setDebug(`❌ Błąd: ${err.message}`);
             showAlert(`Błąd: ${err.message}`);
@@ -411,14 +412,19 @@
     
     async function updatePlayer(updatesObj) {
         if(!currentRowIndex) return false;
+        if (!isLoggedIn) {
+            showAlert("❌ Nie jesteś zalogowany!");
+            return false;
+        }
+        
         try {
             const params = new URLSearchParams();
             params.append('method', 'update');
             params.append('rowIndex', currentRowIndex);
             for (let [key, value] of Object.entries(updatesObj)) params.append(key, value);
             params.append('t', Date.now());
-            let url = `${API_URL}?${params.toString()}`;
-            url = addSessionToUrl(url);
+            params.append('logged_in', 'true');
+            const url = `${API_URL}?${params.toString()}`;
             const response = await fetch(url);
             const result = await response.json();
             if(result.success) {
@@ -433,6 +439,11 @@
     }
     
     async function addNewZawodnik() {
+        if (!isLoggedIn) {
+            showAlert("❌ Nie jesteś zalogowany!");
+            return;
+        }
+        
         const imie = document.getElementById('newImie').value.trim();
         const nazwisko = document.getElementById('newNazwisko').value.trim();
         const rocznik = document.getElementById('newRocznik').value.trim();
@@ -454,10 +465,10 @@
         params.append('konkurencja2', konkurencja2);
         params.append('nr_startowy', nrStartowy);
         params.append('t', Date.now());
+        params.append('logged_in', 'true');
         
         try {
-            let url = `${API_URL}?${params.toString()}`;
-            url = addSessionToUrl(url);
+            const url = `${API_URL}?${params.toString()}`;
             const response = await fetch(url);
             const result = await response.json();
             if (result.success) {
@@ -487,19 +498,19 @@
     function closeAddModal() { document.getElementById('addModal').style.display = 'none'; }
     
     async function searchByNazwisko() {
+        if (!isLoggedIn) {
+            showAlert("❌ Nie jesteś zalogowany!");
+            return;
+        }
+        
         const nazwisko = searchNazwisko.value.trim();
         if (!nazwisko) { showAlert("Wprowadź nazwisko"); return; }
         setDebug(`🔍 Szukam: ${nazwisko}`);
         searchResults.style.display = 'block';
         resultsList.innerHTML = '<div style="text-align:center; padding: 20px;">🔍 Szukam...</div>';
         try {
-            let url = `${API_URL}?search=nazwisko&nazwisko=${encodeURIComponent(nazwisko)}&t=${Date.now()}`;
-            url = addSessionToUrl(url);
+            const url = `${API_URL}?search=nazwisko&nazwisko=${encodeURIComponent(nazwisko)}&t=${Date.now()}&logged_in=true`;
             const results = await (await fetch(url)).json();
-            if (results.error && results.error.includes('autoryzacji')) {
-                resultsList.innerHTML = '<div style="text-align:center; padding: 20px; color: red;">❌ Sesja wygasła</div>';
-                return;
-            }
             if (results.length === 0) {
                 resultsList.innerHTML = '<div style="text-align:center; padding: 20px;">❌ Nie znaleziono</div>';
                 return;
@@ -558,6 +569,11 @@
     }
     
     async function handleIdFound(id) {
+        if (!isLoggedIn) {
+            showAlert("❌ Nie jesteś zalogowany!");
+            return;
+        }
+        
         setDebug(`✨ ID: ${id}`);
         playBeep();
         stopScanner();
