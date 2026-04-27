@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Obsługa Pakietów - Zawody</title>
     <style>
-        /* (tyle samo CSS co wcześniej) */
         * { box-sizing: border-box; font-family: system-ui, 'Segoe UI', sans-serif; }
         body { background: #f0f2f5; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
         .container { max-width: 650px; width: 100%; background: white; border-radius: 32px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); padding: 24px; }
@@ -54,88 +53,129 @@
         .toggle-btn.K.active { background: #ec489a; }
         .checkbox-wrapper { display: flex; align-items: center; gap: 10px; cursor: pointer; }
         .checkbox-wrapper input { width: 24px; height: 24px; margin: 0; cursor: pointer; }
-        #mainContent { display: block; }
+        
+        /* Overlay logowania */
+        #loginOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10001;
+        }
+        #loginOverlay .login-box {
+            background: white;
+            padding: 30px;
+            border-radius: 32px;
+            max-width: 320px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        #mainContent {
+            display: none;
+        }
         @media (max-width: 500px) { .container { padding: 16px; } }
     </style>
 </head>
 <body>
-    <div class="container" id="app">
-        <h1><span>📦</span> <span>Odbiór pakietów</span></h1>
-        <div class="sub">Zarządzanie zawodnikami i odbiorem pakietów</div>
-
-        <div class="scan-area">
-            <div id="reader"></div>
-            <div style="margin-top: 12px; display: flex; flex-wrap: wrap; justify-content: center;">
-                <button id="startScanBtn" class="secondary">📷 Uruchom skaner</button>
-                <button id="stopScanBtn" style="display:none;" class="danger">⏹️ Zatrzymaj</button>
-                <button id="openAddModalBtn" class="info">➕ Nowy zawodnik</button>
-            </div>
-            <p style="font-size:13px; margin-top:12px;">lub wpisz ID ręcznie:</p>
-            <div style="display: flex; gap: 8px;">
-                <input type="text" id="manualId" placeholder="np. 123" style="flex: 1;">
-                <button id="manualSearchBtn">🔍 Szukaj</button>
-            </div>
-            
-            <hr style="margin: 15px 0;">
-            <p style="font-size:13px; font-weight: bold; margin-bottom: 8px;">🔍 Szukaj po nazwisku:</p>
-            <div style="display: flex; gap: 8px;">
-                <input type="text" id="searchNazwisko" placeholder="Wpisz nazwisko" style="flex: 1;">
-                <button id="searchByNazwiskoBtn">🔎 Szukaj</button>
-            </div>
-            <div id="searchResults" style="display:none; margin-top: 15px; background: white; border-radius: 16px; padding: 12px; max-height: 250px; overflow-y: auto;">
-                <div id="resultsList"></div>
-            </div>
+    <!-- Overlay logowania -->
+    <div id="loginOverlay">
+        <div class="login-box">
+            <div style="font-size: 48px; margin-bottom: 15px;">🔐</div>
+            <h2 style="margin-bottom: 20px;">Dostęp chroniony</h2>
+            <p style="color: #666; margin-bottom: 15px; font-size: 14px;">Wprowadź hasło aby uzyskać dostęp</p>
+            <input type="password" id="passwordInput" placeholder="Hasło" style="width: 100%; padding: 12px; border-radius: 40px; border: 1px solid #cbd5e1; font-size: 1rem; margin-bottom: 15px;">
+            <button id="loginBtn" style="background: #10b981; width: 100%;">Zaloguj</button>
+            <div id="loginError" style="color: #ef4444; margin-top: 15px; font-size: 14px; display: none;">❌ Nieprawidłowe hasło</div>
         </div>
-
-        <div id="resultPanel" style="display:none;">
-            <div class="card">
-                <h3>🏃 Dane zawodnika</h3>
-                <div id="playerInfo"></div>
-                
-                <div class="package-btn-container">
-                    <button id="confirmPackageBtn" class="warning">✅ Potwierdź odbiór pakietu</button>
-                    <button id="toggleResignBtn" class="danger">❌ Zarejestruj rezygnację</button>
-                </div>
-                
-                <hr>
-                
-                <div class="edit-group">
-                    <h4>✏️ Edycja danych</h4>
-                    <div class="info-row"><span class="info-label">Imię:</span><input type="text" id="editImie" placeholder="Imię"></div>
-                    <div class="info-row"><span class="info-label">Nazwisko:</span><input type="text" id="editNazwisko" placeholder="Nazwisko"></div>
-                    <div class="info-row"><span class="info-label">Rocznik:</span><input type="number" id="editRocznik" placeholder="Rocznik" step="1"></div>
-                    <div class="info-row">
-                        <span class="info-label">Płeć:</span>
-                        <div class="toggle-group" id="editPlecGroup">
-                            <button type="button" class="toggle-btn M" data-plec="M">Mężczyzna</button>
-                            <button type="button" class="toggle-btn K" data-plec="K">Kobieta</button>
-                        </div>
-                    </div>
-                    <div class="info-row"><span class="info-label">Konkurencja 1:</span><select id="editKonk1"></select></div>
-                    <div class="info-row"><span class="info-label">Konkurencja 2:</span><select id="editKonk2"></select></div>
-                    <div class="info-row"><span class="info-label">Numer startowy:</span><input type="number" id="editNrStartowy" placeholder="Numer startowy" step="1"></div>
-                    <div class="info-row">
-                        <span class="info-label">Rezygnacja:</span>
-                        <div class="checkbox-wrapper">
-                            <input type="checkbox" id="editRezygnacja" style="width: 24px; height: 24px;">
-                            <span>Zaznacz jeśli zawodnik zrezygnował</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="flex-btns">
-                    <button id="saveEditBtn" class="success">💾 Zapisz zmiany</button>
-                    <button id="clearBtn" class="secondary">🔄 Wróć do skanowania</button>
-                </div>
-            </div>
-        </div>
-        
-        <div id="debugPanel" class="debug-info">
-            <strong>Debug:</strong> <span id="debugMsg">Gotowy</span>
-        </div>
-        <footer style="font-size: 0.7rem; text-align: center; margin-top: 16px; color: #666;">Skieruj aparat na kod QR</footer>
     </div>
 
+    <!-- Główna zawartość aplikacji -->
+    <div id="mainContent">
+        <div class="container" id="app">
+            <h1><span>📦</span> <span>Odbiór pakietów</span></h1>
+            <div class="sub">Zarządzanie zawodnikami i odbiorem pakietów</div>
+
+            <div class="scan-area">
+                <div id="reader"></div>
+                <div style="margin-top: 12px; display: flex; flex-wrap: wrap; justify-content: center;">
+                    <button id="startScanBtn" class="secondary">📷 Uruchom skaner</button>
+                    <button id="stopScanBtn" style="display:none;" class="danger">⏹️ Zatrzymaj</button>
+                    <button id="openAddModalBtn" class="info">➕ Nowy zawodnik</button>
+                </div>
+                <p style="font-size:13px; margin-top:12px;">lub wpisz ID ręcznie:</p>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="manualId" placeholder="np. 123" style="flex: 1;">
+                    <button id="manualSearchBtn">🔍 Szukaj</button>
+                </div>
+                
+                <hr style="margin: 15px 0;">
+                <p style="font-size:13px; font-weight: bold; margin-bottom: 8px;">🔍 Szukaj po nazwisku:</p>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="searchNazwisko" placeholder="Wpisz nazwisko" style="flex: 1;">
+                    <button id="searchByNazwiskoBtn">🔎 Szukaj</button>
+                </div>
+                <div id="searchResults" style="display:none; margin-top: 15px; background: white; border-radius: 16px; padding: 12px; max-height: 250px; overflow-y: auto;">
+                    <div id="resultsList"></div>
+                </div>
+            </div>
+
+            <div id="resultPanel" style="display:none;">
+                <div class="card">
+                    <h3>🏃 Dane zawodnika</h3>
+                    <div id="playerInfo"></div>
+                    
+                    <div class="package-btn-container">
+                        <button id="confirmPackageBtn" class="warning">✅ Potwierdź odbiór pakietu</button>
+                        <button id="toggleResignBtn" class="danger">❌ Zarejestruj rezygnację</button>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="edit-group">
+                        <h4>✏️ Edycja danych</h4>
+                        <div class="info-row"><span class="info-label">Imię:</span><input type="text" id="editImie" placeholder="Imię"></div>
+                        <div class="info-row"><span class="info-label">Nazwisko:</span><input type="text" id="editNazwisko" placeholder="Nazwisko"></div>
+                        <div class="info-row"><span class="info-label">Rocznik:</span><input type="number" id="editRocznik" placeholder="Rocznik" step="1"></div>
+                        <div class="info-row">
+                            <span class="info-label">Płeć:</span>
+                            <div class="toggle-group" id="editPlecGroup">
+                                <button type="button" class="toggle-btn M" data-plec="M">Mężczyzna</button>
+                                <button type="button" class="toggle-btn K" data-plec="K">Kobieta</button>
+                            </div>
+                        </div>
+                        <div class="info-row"><span class="info-label">Konkurencja 1:</span><select id="editKonk1"></select></div>
+                        <div class="info-row"><span class="info-label">Konkurencja 2:</span><select id="editKonk2"></select></div>
+                        <div class="info-row"><span class="info-label">Numer startowy:</span><input type="number" id="editNrStartowy" placeholder="Numer startowy" step="1"></div>
+                        <div class="info-row">
+                            <span class="info-label">Rezygnacja:</span>
+                            <div class="checkbox-wrapper">
+                                <input type="checkbox" id="editRezygnacja" style="width: 24px; height: 24px;">
+                                <span>Zaznacz jeśli zawodnik zrezygnował</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex-btns">
+                        <button id="saveEditBtn" class="success">💾 Zapisz zmiany</button>
+                        <button id="clearBtn" class="secondary">🔄 Wróć do skanowania</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="debugPanel" class="debug-info">
+                <strong>Debug:</strong> <span id="debugMsg">Gotowy</span>
+            </div>
+            <footer style="font-size: 0.7rem; text-align: center; margin-top: 16px; color: #666;">Skieruj aparat na kod QR</footer>
+        </div>
+    </div>
+
+    <!-- Modal do dodawania nowego zawodnika -->
     <div id="addModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -163,19 +203,12 @@
     </div>
 
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
     <script>
     // ==================== KONFIGURACJA ====================
-    // ⚠️ TEN KLUCZ JEST WIDOCZNY - ale lepsze to niż hasło w UI
-    // W przyszłości można go schować za proxy
-    const API_KEY = "MOJE_TAJNE_HASLO_12345"; // MUSI BYĆ TAKIE SAMO JAK W APPS SCRIPT!
-    const API_URL = 'https://script.google.com/macros/s/TWÓJ_URL/exec'; // 🔁 PODMIEŃ!
+    const API_URL = 'https://script.google.com/macros/s/AKfycbzefvaEHEVOSkogq2HjemmOAluIFhVqmnZvmvt1pB8clSlQqcZVyYmFOjZ9jwwL4ZQ9/exec'; // 🔁 PODMIEŃ!
     
-    // Dodaj api_key do każdego zapytania
-    function addApiKey(url) {
-        const separator = url.includes('?') ? '&' : '?';
-        return `${url}${separator}api_key=${API_KEY}`;
-    }
-    
+    let sessionToken = null;
     let konkurencjeList = [];
     let currentRowIndex = null;
     let currentPlayerData = null;
@@ -183,6 +216,7 @@
     let isScanning = false;
     let currentPlec = '';
     
+    // Elementy DOM
     const resultPanel = document.getElementById('resultPanel');
     const playerInfoDiv = document.getElementById('playerInfo');
     const debugMsg = document.getElementById('debugMsg');
@@ -211,6 +245,7 @@
     const searchResults = document.getElementById('searchResults');
     const resultsList = document.getElementById('resultsList');
     
+    // ==================== FUNKCJE POMOCNICZE ====================
     function setDebug(msg) {
         const timestamp = new Date().toLocaleTimeString();
         debugMsg.innerHTML = `[${timestamp}] ${msg}<br>${debugMsg.innerHTML}`;
@@ -228,6 +263,54 @@
         alertDiv.innerText = msg;
         document.getElementById('app').insertBefore(alertDiv, resultPanel);
         setTimeout(() => alertDiv.remove(), 4000);
+    }
+    
+    function addSessionToUrl(url) {
+        if (!sessionToken) return url;
+        const separator = url.includes('?') ? '&' : '?';
+        return `${url}${separator}session=${sessionToken}`;
+    }
+    
+    // ==================== LOGOWANIE ====================
+    async function login() {
+        const password = document.getElementById('passwordInput').value;
+        if (!password) {
+            document.getElementById('loginError').style.display = 'block';
+            document.getElementById('loginError').innerText = '❌ Wprowadź hasło';
+            return;
+        }
+        
+        setDebug('Weryfikacja hasła...');
+        
+        try {
+            const response = await fetch(`${API_URL}?action=login&password=${encodeURIComponent(password)}&t=${Date.now()}`);
+            const result = await response.json();
+            
+            if (result.success) {
+                // Ustaw token sesji (używamy hasła jako tokenu, ale nie przechowujemy w kodzie)
+                sessionToken = 'logged_in';
+                document.getElementById('loginOverlay').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                initializeApp();
+                setDebug('✅ Zalogowano pomyślnie!');
+            } else {
+                document.getElementById('loginError').style.display = 'block';
+                document.getElementById('loginError').innerText = '❌ Nieprawidłowe hasło';
+                setDebug('❌ Nieprawidłowe hasło');
+            }
+        } catch(err) {
+            document.getElementById('loginError').style.display = 'block';
+            document.getElementById('loginError').innerText = '❌ Błąd połączenia';
+            setDebug(`❌ Błąd logowania: ${err.message}`);
+        }
+    }
+    
+    // ==================== INICJALIZACJA APLIKACJI ====================
+    function initializeApp() {
+        setDebug('✅ Inicjalizacja aplikacji...');
+        loadKonkurencje();
+        setupPlecToggles();
+        setDebug('✅ Aplikacja gotowa!');
     }
     
     function setupPlecToggles() {
@@ -308,13 +391,14 @@
     async function fetchPlayerById(id) {
         try {
             setDebug(`Pobieranie ID: ${id}`);
-            const url = addApiKey(`${API_URL}?id=${encodeURIComponent(id)}&t=${Date.now()}`);
+            let url = `${API_URL}?id=${encodeURIComponent(id)}&t=${Date.now()}`;
+            url = addSessionToUrl(url);
             const response = await fetch(url);
             const text = await response.text();
             setDebug(`Odpowiedź: ${text.substring(0, 150)}`);
             const data = JSON.parse(text);
             if (data.error && data.error.includes('autoryzacji')) {
-                showAlert("❌ Błąd autoryzacji - skontaktuj się z administratorem!");
+                showAlert("❌ Sesja wygasła - odśwież stronę i zaloguj ponownie!");
                 return null;
             }
             return data;
@@ -333,7 +417,8 @@
             params.append('rowIndex', currentRowIndex);
             for (let [key, value] of Object.entries(updatesObj)) params.append(key, value);
             params.append('t', Date.now());
-            const url = addApiKey(`${API_URL}?${params.toString()}`);
+            let url = `${API_URL}?${params.toString()}`;
+            url = addSessionToUrl(url);
             const response = await fetch(url);
             const result = await response.json();
             if(result.success) {
@@ -371,7 +456,8 @@
         params.append('t', Date.now());
         
         try {
-            const url = addApiKey(`${API_URL}?${params.toString()}`);
+            let url = `${API_URL}?${params.toString()}`;
+            url = addSessionToUrl(url);
             const response = await fetch(url);
             const result = await response.json();
             if (result.success) {
@@ -407,10 +493,11 @@
         searchResults.style.display = 'block';
         resultsList.innerHTML = '<div style="text-align:center; padding: 20px;">🔍 Szukam...</div>';
         try {
-            const url = addApiKey(`${API_URL}?search=nazwisko&nazwisko=${encodeURIComponent(nazwisko)}&t=${Date.now()}`);
+            let url = `${API_URL}?search=nazwisko&nazwisko=${encodeURIComponent(nazwisko)}&t=${Date.now()}`;
+            url = addSessionToUrl(url);
             const results = await (await fetch(url)).json();
             if (results.error && results.error.includes('autoryzacji')) {
-                resultsList.innerHTML = '<div style="text-align:center; padding: 20px; color: red;">❌ Błąd autoryzacji</div>';
+                resultsList.innerHTML = '<div style="text-align:center; padding: 20px; color: red;">❌ Sesja wygasła</div>';
                 return;
             }
             if (results.length === 0) {
@@ -559,9 +646,11 @@
         stopScanBtn.style.display = 'none';
     }
     
-    // Inicjalizacja
-    loadKonkurencje();
-    setupPlecToggles();
+    // Event listeners
+    document.getElementById('loginBtn').addEventListener('click', login);
+    document.getElementById('passwordInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') login();
+    });
     
     startScanBtn?.addEventListener('click', startScanner);
     stopScanBtn?.addEventListener('click', stopScanner);
@@ -576,7 +665,7 @@
     saveNewBtn?.addEventListener('click', addNewZawodnik);
     window.addEventListener('click', (e) => { if (e.target === document.getElementById('addModal')) closeAddModal(); });
     
-    setDebug('✅ Aplikacja gotowa');
+    setDebug('✅ Aplikacja załadowana, oczekuje na logowanie...');
     </script>
 </body>
 </html>
