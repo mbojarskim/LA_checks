@@ -281,7 +281,6 @@
             
             if (result.success) {
                 isLoggedIn = true;
-                // Zapisz informację o zalogowaniu w sessionStorage
                 sessionStorage.setItem('isLoggedIn', 'true');
                 document.getElementById('loginOverlay').style.display = 'none';
                 document.getElementById('mainContent').style.display = 'block';
@@ -307,7 +306,7 @@
         initializeApp();
     }
     
-    // ==================== INICJALIZACJA APLIKACJI ====================
+    // ==================== INICJALIZACJA ====================
     function initializeApp() {
         setDebug('✅ Inicjalizacja aplikacji...');
         loadKonkurencje();
@@ -390,6 +389,12 @@
         } catch(e) {}
     }
     
+    // ==================== ZAPYTANIA DO API ====================
+    function addAuth(url) {
+        const separator = url.includes('?') ? '&' : '?';
+        return `${url}${separator}logged_in=true&t=${Date.now()}`;
+    }
+    
     async function fetchPlayerById(id) {
         if (!isLoggedIn) {
             showAlert("❌ Nie jesteś zalogowany!");
@@ -398,7 +403,8 @@
         
         try {
             setDebug(`Pobieranie ID: ${id}`);
-            const url = `${API_URL}?id=${encodeURIComponent(id)}&t=${Date.now()}&logged_in=true`;
+            let url = `${API_URL}?id=${encodeURIComponent(id)}`;
+            url = addAuth(url);
             const response = await fetch(url);
             const text = await response.text();
             setDebug(`Odpowiedź: ${text.substring(0, 150)}`);
@@ -412,19 +418,15 @@
     
     async function updatePlayer(updatesObj) {
         if(!currentRowIndex) return false;
-        if (!isLoggedIn) {
-            showAlert("❌ Nie jesteś zalogowany!");
-            return false;
-        }
+        if (!isLoggedIn) return false;
         
         try {
             const params = new URLSearchParams();
             params.append('method', 'update');
             params.append('rowIndex', currentRowIndex);
             for (let [key, value] of Object.entries(updatesObj)) params.append(key, value);
-            params.append('t', Date.now());
-            params.append('logged_in', 'true');
-            const url = `${API_URL}?${params.toString()}`;
+            let url = `${API_URL}?${params.toString()}`;
+            url = addAuth(url);
             const response = await fetch(url);
             const result = await response.json();
             if(result.success) {
@@ -464,11 +466,11 @@
         params.append('konkurencja1', konkurencja1);
         params.append('konkurencja2', konkurencja2);
         params.append('nr_startowy', nrStartowy);
-        params.append('t', Date.now());
-        params.append('logged_in', 'true');
+        
+        let url = `${API_URL}?${params.toString()}`;
+        url = addAuth(url);
         
         try {
-            const url = `${API_URL}?${params.toString()}`;
             const response = await fetch(url);
             const result = await response.json();
             if (result.success) {
@@ -509,8 +511,13 @@
         searchResults.style.display = 'block';
         resultsList.innerHTML = '<div style="text-align:center; padding: 20px;">🔍 Szukam...</div>';
         try {
-            const url = `${API_URL}?search=nazwisko&nazwisko=${encodeURIComponent(nazwisko)}&t=${Date.now()}&logged_in=true`;
+            let url = `${API_URL}?search=nazwisko&nazwisko=${encodeURIComponent(nazwisko)}`;
+            url = addAuth(url);
             const results = await (await fetch(url)).json();
+            if (results.error) {
+                resultsList.innerHTML = `<div style="text-align:center; padding: 20px;">❌ ${results.error}</div>`;
+                return;
+            }
             if (results.length === 0) {
                 resultsList.innerHTML = '<div style="text-align:center; padding: 20px;">❌ Nie znaleziono</div>';
                 return;
@@ -521,7 +528,10 @@
                     <div style="font-size: 0.85rem;">ID: ${player.ID} | Nr: ${player.Nr_startowy || 'brak'}</div>
                 </div>
             `).join('');
-        } catch(err) { resultsList.innerHTML = '<div style="text-align:center; padding: 20px;">❌ Błąd</div>'; }
+        } catch(err) { 
+            resultsList.innerHTML = '<div style="text-align:center; padding: 20px;">❌ Błąd</div>';
+            setDebug(`Błąd: ${err.message}`);
+        }
     }
     
     window.selectPlayer = async function(rowIndex, id) {
@@ -535,6 +545,8 @@
             renderPlayerPanel(result);
             showAlert(`✅ Wybrano: ${result.data.Imię} ${result.data.Nazwisko}`, false);
             playBeep();
+        } else {
+            showAlert(result?.error || "Nie udało się pobrać danych");
         }
     };
     
@@ -586,7 +598,7 @@
             showAlert(`✅ Znaleziono: ${result.data.Imię} ${result.data.Nazwisko}`, false);
         } else {
             resultPanel.style.display = 'none';
-            showAlert(result?.error || "Nie znaleziono");
+            showAlert(result?.error || "Nie znaleziono zawodnika");
         }
     }
     
@@ -653,6 +665,7 @@
             isScanning = true;
             startScanBtn.style.display = 'none';
             stopScanBtn.style.display = 'inline-block';
+            setDebug('✅ Skaner uruchomiony');
         } catch (err) { showAlert('Nie można uruchomić kamery'); }
     }
     
@@ -660,6 +673,7 @@
         if (html5QrCode && isScanning) { try { await html5QrCode.stop(); } catch(e) {} isScanning = false; }
         startScanBtn.style.display = 'inline-block';
         stopScanBtn.style.display = 'none';
+        setDebug('Skaner zatrzymany');
     }
     
     // Event listeners
