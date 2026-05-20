@@ -550,7 +550,7 @@
     function renderPlayerPanel(dataObj) {
         const d = dataObj.data;
         const isTaken = d.Pakiet_Odebrany === 'TAK';
-        const isResigned = d.Rezygnacja === 'TRUE';
+        const isResigned = String(d.Rezygnacja || '').toUpperCase() === 'TRUE';
         
         playerInfoDiv.innerHTML = `
             <div class="info-row"><span class="info-label">ID:</span><span class="info-value">${d.ID || ''}</span></div>
