@@ -225,7 +225,6 @@
 
     <script>
     // ==================== KONFIGURACJA FIREBASE ====================
-    // ⚠️ TUTAJ WPISZ SWOJĄ NOWĄ KONFIGURACJĘ Z FIREBASE CONSOLE ⚠️
     const firebaseConfig = {
         apiKey: "AIzaSyD2HMHEDyZ6jrUHwjv8wDaxd7swi9rtn2k",
         authDomain: "zawodylekkoatletyczne.firebaseapp.com",
@@ -364,7 +363,6 @@
             document.getElementById('loginOverlay').style.display = 'flex';
             document.getElementById('mainContent').style.display = 'none';
             
-            // Wyczyść dane
             clearPanel();
             if (html5QrCode && isScanning) {
                 stopScanner();
@@ -384,7 +382,6 @@
     // Sprawdź stan autoryzacji przy starcie
     auth.onAuthStateChanged((user) => {
         if (user) {
-            // Użytkownik jest zalogowany
             if (!isLoggedIn) {
                 isLoggedIn = true;
                 document.getElementById('loginOverlay').style.display = 'none';
@@ -393,9 +390,7 @@
                 setDebug(`✅ Witaj ponownie, ${user.email}`);
             }
         } else {
-            // Użytkownik nie jest zalogowany
             if (isLoggedIn) {
-                // Wylogowano
                 isLoggedIn = false;
                 sessionStorage.removeItem('firebaseLoggedIn');
             }
@@ -602,4 +597,247 @@
             
             for (const [id, player] of Object.entries(data || {})) {
                 if (player.nazwisko && player.nazwisko.toUpperCase().includes(nazwisko)) {
-                    results.push({ id: id, ...player
+                    results.push({ id: id, ...player });
+                }
+            }
+            
+            if (results.length === 0) {
+                resultsList.innerHTML = '<div style="text-align:center; padding: 20px;">❌ Nie znaleziono</div>';
+                return;
+            }
+            
+            resultsList.innerHTML = results.map(player => `
+                <div onclick="selectPlayer('${player.id}')" class="search-result-item">
+                    <div style="font-weight: bold;">${player.imie || ''} ${player.nazwisko || ''}</div>
+                    <div style="font-size: 0.85rem;">ID: ${player.id} | Nr: ${player.nr_startowy || 'brak'}</div>
+                </div>
+            `).join('');
+        } catch(err) { 
+            resultsList.innerHTML = '<div style="text-align:center; padding: 20px;">❌ Błąd</div>';
+            setDebug(`Błąd: ${err.message}`);
+        }
+    }
+    
+    window.selectPlayer = async function(id) {
+        searchResults.style.display = 'none';
+        searchNazwisko.value = '';
+        handleIdFound(id);
+    };
+    
+    function clearAddForm() {
+        document.getElementById('newImie').value = '';
+        document.getElementById('newNazwisko').value = '';
+        document.getElementById('newRocznik').value = '';
+        document.getElementById('newPlecGroup').querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('newKonk1').value = '';
+        document.getElementById('newKonk2').value = '';
+        document.getElementById('newNrStartowy').value = '';
+        document.getElementById('newEmail').value = '';
+    }
+    
+    function openAddModal() { document.getElementById('addModal').style.display = 'flex'; }
+    function closeAddModal() { document.getElementById('addModal').style.display = 'none'; }
+    
+    function renderPlayerPanel(player) {
+        const d = player;
+        const isTaken = d.pakiet_odebrany === 'TAK';
+        const isResigned = String(d.rezygnacja || '').toUpperCase() === 'TRUE';
+        
+        if (viewId) viewId.innerText = d.id || '-';
+        
+        playerInfoDiv.innerHTML = `
+            <div class="info-row"><span class="info-label">ID:</span><span class="info-value">${d.id || ''}</span></div>
+            <div class="info-row"><span class="info-label">Imię i nazwisko:</span><span class="info-value">${d.imie || ''} ${d.nazwisko || ''}</span></div>
+            <div class="info-row"><span class="info-label">Rocznik:</span><span class="info-value">${d.rocznik || '—'}</span></div>
+            <div class="info-row"><span class="info-label">Płeć:</span><span class="info-value">${d.plec === 'M' ? 'Mężczyzna' : (d.plec === 'K' ? 'Kobieta' : '—')}</span></div>
+            <div class="info-row"><span class="info-label">Konkurencje:</span><span class="info-value">${d.konkurencja1 || '—'} ${d.konkurencja2 ? '/ ' + d.konkurencja2 : ''}</span></div>
+            <div class="info-row"><span class="info-label">Numer startowy:</span><span class="info-value">${d.nr_startowy || 'Nieprzydzielony'}</span></div>
+            <div class="info-row"><span class="info-label">Email:</span><span class="info-value">${d.email || '—'}</span></div>
+            <div class="info-row"><span class="info-label">Status pakietu:</span><span class="package-status ${isTaken ? '' : 'package-absent'}">${isTaken ? '✅ ODEBRANY' : '❌ NIEODEBRANY'}</span></div>
+            <div class="info-row"><span class="info-label">Rezygnacja:</span><span class="${isResigned ? 'resign-status-true' : 'resign-status-false'}">${isResigned ? '❌ ZREZYGNOWAŁ' : '✅ AKTYWNY'}</span></div>
+        `;
+        
+        confirmPackageBtn.style.opacity = isTaken ? '0.6' : '1';
+        toggleResignBtn.textContent = isResigned ? '🔄 Cofnij rezygnację' : '❌ Zarejestruj rezygnację';
+        toggleResignBtn.style.background = isResigned ? '#10b981' : '#ef4444';
+        
+        editImie.value = d.imie || '';
+        editNazwisko.value = d.nazwisko || '';
+        editRocznik.value = d.rocznik || '';
+        setPlecToggle(d.plec || '');
+        if (d.konkurencja1) editKonk1.value = d.konkurencja1;
+        if (d.konkurencja2) editKonk2.value = d.konkurencja2;
+        editNrStartowy.value = d.nr_startowy || '';
+        editEmail.value = d.email || '';
+        editRezygnacja.checked = isResigned;
+    }
+    
+    async function handleIdFound(id) {
+        setDebug(`✨ ID: ${id}`);
+        playBeep();
+        stopScanner();
+        const result = await fetchPlayerById(id);
+        if(result?.success) {
+            currentPlayerId = id;
+            currentPlayerData = result.data;
+            resultPanel.style.display = 'block';
+            renderPlayerPanel(result.data);
+            showAlert(`✅ Znaleziono: ${result.data.imie} ${result.data.nazwisko}`, false);
+        } else {
+            resultPanel.style.display = 'none';
+            showAlert(result?.error || "Nie znaleziono zawodnika");
+        }
+    }
+    
+    async function saveEdits() {
+        if(!currentPlayerId) return;
+        const updates = {};
+        if(editImie.value !== (currentPlayerData?.imie || '')) updates.imie = editImie.value.toUpperCase();
+        if(editNazwisko.value !== (currentPlayerData?.nazwisko || '')) updates.nazwisko = editNazwisko.value.toUpperCase();
+        if(editRocznik.value !== (currentPlayerData?.rocznik || '')) updates.rocznik = editRocznik.value;
+        if(currentPlec !== (currentPlayerData?.plec || '')) updates.plec = currentPlec;
+        if(editKonk1.value !== (currentPlayerData?.konkurencja1 || '')) updates.konkurencja1 = editKonk1.value;
+        if(editKonk2.value !== (currentPlayerData?.konkurencja2 || '')) updates.konkurencja2 = editKonk2.value;
+        if(editNrStartowy.value !== (currentPlayerData?.nr_startowy || '')) updates.nr_startowy = editNrStartowy.value;
+        if(editEmail.value !== (currentPlayerData?.email || '')) updates.email = editEmail.value;
+        
+        const newResign = editRezygnacja.checked ? 'TRUE' : 'FALSE';
+        if(newResign !== (currentPlayerData?.rezygnacja || 'FALSE')) updates.rezygnacja = newResign;
+        
+        if(Object.keys(updates).length === 0) { showAlert("Brak zmian", false); return; }
+        if(await updatePlayer(currentPlayerId, updates)) {
+            const refreshed = await fetchPlayerById(currentPlayerId);
+            if(refreshed?.success) { 
+                currentPlayerData = refreshed.data; 
+                renderPlayerPanel(refreshed.data);
+                showAlert("✅ Zapisano zmiany!", false);
+            }
+        }
+    }
+    
+    async function confirmPackage() {
+        if(!currentPlayerId) return;
+        if(currentPlayerData?.pakiet_odebrany === 'TAK') { showAlert("Pakiet już odebrany!", false); return; }
+        if(await updatePlayer(currentPlayerId, { pakiet_odebrany: 'TAK' })) {
+            const refreshed = await fetchPlayerById(currentPlayerId);
+            if(refreshed?.success) { 
+                currentPlayerData = refreshed.data; 
+                renderPlayerPanel(refreshed.data);
+                showAlert("✅ Pakiet odebrany!", false);
+                playBeep();
+            }
+        }
+    }
+    
+    async function toggleResign() {
+        if(!currentPlayerId) return;
+        const currentResign = currentPlayerData?.rezygnacja === 'TRUE';
+        const newResign = !currentResign;
+        if(confirm(`Czy na pewno chcesz ${newResign ? 'zarejestrować rezygnację' : 'cofnąć rezygnację'}?`)) {
+            if(await updatePlayer(currentPlayerId, { rezygnacja: newResign ? 'TRUE' : 'FALSE' })) {
+                const refreshed = await fetchPlayerById(currentPlayerId);
+                if(refreshed?.success) { 
+                    currentPlayerData = refreshed.data; 
+                    renderPlayerPanel(refreshed.data);
+                    playBeep();
+                }
+            }
+        }
+    }
+    
+    async function deleteCurrentPlayer() {
+        if(!currentPlayerId) return;
+        if(confirm(`Czy na pewno chcesz USUNĄĆ zawodnika ${currentPlayerData?.imie} ${currentPlayerData?.nazwisko}? Tej operacji nie można cofnąć!`)) {
+            if(await deletePlayer(currentPlayerId)) {
+                showAlert("🗑️ Zawodnik usunięty", false);
+                clearPanel();
+            }
+        }
+    }
+    
+    function clearPanel() {
+        resultPanel.style.display = 'none';
+        currentPlayerId = null;
+        currentPlayerData = null;
+        manualIdInput.value = '';
+        searchResults.style.display = 'none';
+        searchNazwisko.value = '';
+        setDebug('Panel wyczyszczony');
+    }
+    
+    async function startScanner() {
+        if (isScanning) return;
+        if (!navigator.mediaDevices?.getUserMedia) { showAlert('Brak kamery'); return; }
+        if (html5QrCode) { try { await html5QrCode.stop(); } catch(e) {} }
+        html5QrCode = new Html5Qrcode("reader");
+        try {
+            await html5QrCode.start({ facingMode: "environment" }, { fps: 15, qrbox: { width: 250, height: 250 } },
+                (text) => handleIdFound(text.trim()), () => {});
+            isScanning = true;
+            startScanBtn.style.display = 'none';
+            stopScanBtn.style.display = 'inline-block';
+            setDebug('✅ Skaner uruchomiony');
+        } catch (err) { showAlert('Nie można uruchomić kamery'); }
+    }
+    
+    async function stopScanner() {
+        if (html5QrCode && isScanning) { try { await html5QrCode.stop(); } catch(e) {} isScanning = false; }
+        startScanBtn.style.display = 'inline-block';
+        stopScanBtn.style.display = 'none';
+        setDebug('Skaner zatrzymany');
+    }
+    
+    // ==================== EVENT LISTENERS ====================
+    // Logowanie
+    const loginBtnElement = document.getElementById('loginBtn');
+    const loginEmailElement = document.getElementById('loginEmail');
+    const loginPasswordElement = document.getElementById('loginPassword');
+
+    if (loginBtnElement) {
+        loginBtnElement.addEventListener('click', function() {
+            const email = loginEmailElement.value.trim();
+            const password = loginPasswordElement.value;
+            if (email && password) {
+                login(email, password);
+            } else {
+                document.getElementById('loginError').style.display = 'block';
+                document.getElementById('loginError').innerText = '❌ Wprowadź email i hasło';
+            }
+        });
+    }
+
+    if (loginPasswordElement) {
+        loginPasswordElement.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const email = loginEmailElement.value.trim();
+                const password = loginPasswordElement.value;
+                if (email && password) {
+                    login(email, password);
+                } else {
+                    document.getElementById('loginError').style.display = 'block';
+                    document.getElementById('loginError').innerText = '❌ Wprowadź email i hasło';
+                }
+            }
+        });
+    }
+    
+    // Pozostałe listenery
+    startScanBtn?.addEventListener('click', startScanner);
+    stopScanBtn?.addEventListener('click', stopScanner);
+    manualSearchBtn?.addEventListener('click', () => { const id = manualIdInput.value.trim(); if(id) handleIdFound(id); else showAlert("Wprowadź ID"); });
+    saveEditBtn?.addEventListener('click', saveEdits);
+    confirmPackageBtn?.addEventListener('click', confirmPackage);
+    toggleResignBtn?.addEventListener('click', toggleResign);
+    clearBtn?.addEventListener('click', clearPanel);
+    deletePlayerBtn?.addEventListener('click', deleteCurrentPlayer);
+    searchByNazwiskoBtn?.addEventListener('click', searchByNazwisko);
+    searchNazwisko?.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchByNazwisko(); });
+    openAddModalBtn?.addEventListener('click', openAddModal);
+    saveNewBtn?.addEventListener('click', addNewZawodnik);
+    logoutBtn?.addEventListener('click', logout);
+    window.addEventListener('click', (e) => { if (e.target === document.getElementById('addModal')) closeAddModal(); });
+    
+    setDebug('✅ Aplikacja załadowana (Firebase + Auth), oczekuje na logowanie...');
+    </script>
+</body>
+</html>
