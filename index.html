@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Obsługa Pakietów - Zawody</title>
+    <title>Odbiór Pakietów - Zawody (Firebase)</title>
     <style>
         * { box-sizing: border-box; font-family: system-ui, 'Segoe UI', sans-serif; }
         body { background: #f0f2f5; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
@@ -13,7 +13,7 @@
         .scan-area { background: #f8fafc; border-radius: 24px; padding: 20px; text-align: center; border: 2px dashed #cbd5e1; margin-bottom: 24px; }
         #reader { width: 100%; max-width: 400px; margin: 12px auto; min-height: 300px; background: #000; border-radius: 16px; overflow: hidden; }
         #reader video { width: 100% !important; height: auto !important; }
-        button { background: #3b82f6; border: none; color: white; font-weight: 600; padding: 12px 20px; border-radius: 40px; font-size: 1rem; cursor: pointer; margin: 6px; transition: 0.2s; }
+        button { background: #3b82f6; border: none; color: white; font-weight: 600; padding: 14px 20px; border-radius: 40px; font-size: 1rem; cursor: pointer; margin: 6px 0; transition: 0.2s; width: 100%; }
         button:hover { opacity: 0.9; transform: scale(0.98); }
         button.secondary { background: #64748b; }
         button.warning { background: #f97316; }
@@ -31,9 +31,7 @@
         .edit-group { margin: 16px 0; }
         input, select, textarea { width: 100%; padding: 12px; border-radius: 20px; border: 1px solid #cbd5e1; font-size: 1rem; margin-top: 4px; }
         input[type="number"] { -moz-appearance: textfield; }
-        .flex-btns { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 20px; }
-        .package-btn-container { display: flex; justify-content: center; margin: 20px 0 10px 0; gap: 12px; flex-wrap: wrap; }
-        .package-btn-container button { min-width: 200px; font-size: 1.1rem; padding: 14px 24px; }
+        .action-buttons { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
         .alert { padding: 12px; border-radius: 28px; background: #fee2e2; color: #b91c1c; text-align: center; margin: 16px 0; }
         .alert-success { background: #e6f7e6; color: #2e7d32; }
         .debug-info { font-size: 0.7rem; color: #666; margin-top: 10px; padding: 8px; background: #f9f9f9; border-radius: 8px; word-break: break-all; font-family: monospace; max-height: 150px; overflow-y: auto; }
@@ -47,7 +45,7 @@
         .close-modal { background: none; color: #666; font-size: 24px; padding: 0; margin: 0; width: 30px; height: 30px; }
         .close-modal:hover { background: none; color: #000; }
         .toggle-group { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
-        .toggle-btn { background: #e2e8f0; color: #334155; padding: 8px 20px; border-radius: 40px; cursor: pointer; margin: 0; }
+        .toggle-btn { background: #e2e8f0; color: #334155; padding: 8px 20px; border-radius: 40px; cursor: pointer; margin: 0; width: auto; }
         .toggle-btn.active { background: #3b82f6; color: white; }
         .toggle-btn.M.active { background: #3b82f6; }
         .toggle-btn.K.active { background: #ec489a; }
@@ -78,46 +76,67 @@
         #mainContent {
             display: none;
         }
+        .logout-btn {
+            background: #ef4444;
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            width: auto;
+            margin-left: auto;
+        }
+        .header-with-logout {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
         @media (max-width: 500px) { .container { padding: 16px; } }
     </style>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 </head>
 <body>
     <!-- Overlay logowania -->
     <div id="loginOverlay">
         <div class="login-box">
             <div style="font-size: 48px; margin-bottom: 15px;">🔐</div>
-            <h2 style="margin-bottom: 20px;">Dostęp chroniony</h2>
-            <p style="color: #666; margin-bottom: 15px; font-size: 14px;">Wprowadź hasło aby uzyskać dostęp</p>
-            <input type="password" id="passwordInput" placeholder="Hasło" style="width: 100%; padding: 12px; border-radius: 40px; border: 1px solid #cbd5e1; font-size: 1rem; margin-bottom: 15px;">
+            <h2 style="margin-bottom: 20px;">Logowanie do systemu</h2>
+            <p style="color: #666; margin-bottom: 15px; font-size: 14px;">Wprowadź dane logowania</p>
+            <input type="email" id="loginEmail" placeholder="Email" style="width: 100%; padding: 12px; border-radius: 40px; border: 1px solid #cbd5e1; font-size: 1rem; margin-bottom: 15px;">
+            <input type="password" id="loginPassword" placeholder="Hasło" style="width: 100%; padding: 12px; border-radius: 40px; border: 1px solid #cbd5e1; font-size: 1rem; margin-bottom: 15px;">
             <button id="loginBtn" style="background: #10b981; width: 100%;">Zaloguj</button>
-            <div id="loginError" style="color: #ef4444; margin-top: 15px; font-size: 14px; display: none;">❌ Nieprawidłowe hasło</div>
+            <div id="loginError" style="color: #ef4444; margin-top: 15px; font-size: 14px; display: none;">❌ Nieprawidłowy email lub hasło</div>
         </div>
     </div>
 
     <!-- Główna zawartość aplikacji -->
     <div id="mainContent">
         <div class="container" id="app">
-            <h1><span>📦</span> <span>Odbiór pakietów</span></h1>
-            <div class="sub">Zarządzanie zawodnikami i odbiorem pakietów</div>
+            <div class="header-with-logout">
+                <h1><span>📦</span> <span>Odbiór pakietów</span></h1>
+                <button id="logoutBtn" class="logout-btn">🚪 Wyloguj</button>
+            </div>
+            <div class="sub">Zarządzanie zawodnikami i odbiorem pakietów (Firebase)</div>
 
             <div class="scan-area">
                 <div id="reader"></div>
-                <div style="margin-top: 12px; display: flex; flex-wrap: wrap; justify-content: center;">
-                    <button id="startScanBtn" class="secondary">📷 Uruchom skaner</button>
-                    <button id="stopScanBtn" style="display:none;" class="danger">⏹️ Zatrzymaj</button>
-                    <button id="openAddModalBtn" class="info">➕ Nowy zawodnik</button>
+                <div style="margin-top: 12px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;">
+                    <button id="startScanBtn" class="secondary" style="width: auto; flex: 1;">📷 Uruchom skaner</button>
+                    <button id="stopScanBtn" style="display:none; width: auto; flex: 1;" class="danger">⏹️ Zatrzymaj</button>
+                    <button id="openAddModalBtn" class="info" style="width: auto; flex: 1;">➕ Nowy zawodnik</button>
                 </div>
                 <p style="font-size:13px; margin-top:12px;">lub wpisz ID ręcznie:</p>
                 <div style="display: flex; gap: 8px;">
                     <input type="text" id="manualId" placeholder="np. 123" style="flex: 1;">
-                    <button id="manualSearchBtn">🔍 Szukaj</button>
+                    <button id="manualSearchBtn" style="width: auto; margin: 0;">🔍 Szukaj</button>
                 </div>
                 
                 <hr style="margin: 15px 0;">
                 <p style="font-size:13px; font-weight: bold; margin-bottom: 8px;">🔍 Szukaj po nazwisku:</p>
                 <div style="display: flex; gap: 8px;">
                     <input type="text" id="searchNazwisko" placeholder="Wpisz nazwisko" style="flex: 1;">
-                    <button id="searchByNazwiskoBtn">🔎 Szukaj</button>
+                    <button id="searchByNazwiskoBtn" style="width: auto; margin: 0;">🔎 Szukaj</button>
                 </div>
                 <div id="searchResults" style="display:none; margin-top: 15px; background: white; border-radius: 16px; padding: 12px; max-height: 250px; overflow-y: auto;">
                     <div id="resultsList"></div>
@@ -129,15 +148,11 @@
                     <h3>🏃 Dane zawodnika</h3>
                     <div id="playerInfo"></div>
                     
-                    <div class="package-btn-container">
-                        <button id="confirmPackageBtn" class="warning">✅ Potwierdź odbiór pakietu</button>
-                        <button id="toggleResignBtn" class="danger">❌ Zarejestruj rezygnację</button>
-                    </div>
-                    
                     <hr>
                     
                     <div class="edit-group">
                         <h4>✏️ Edycja danych</h4>
+                        <div class="info-row"><span class="info-label">ID:</span><span class="info-value" id="viewId">-</span></div>
                         <div class="info-row"><span class="info-label">Imię:</span><input type="text" id="editImie" placeholder="Imię"></div>
                         <div class="info-row"><span class="info-label">Nazwisko:</span><input type="text" id="editNazwisko" placeholder="Nazwisko"></div>
                         <div class="info-row"><span class="info-label">Rocznik:</span><input type="number" id="editRocznik" placeholder="Rocznik" step="1"></div>
@@ -150,7 +165,8 @@
                         </div>
                         <div class="info-row"><span class="info-label">Konkurencja 1:</span><select id="editKonk1"></select></div>
                         <div class="info-row"><span class="info-label">Konkurencja 2:</span><select id="editKonk2"></select></div>
-                        <div class="info-row"><span class="info-label">Numer startowy:</span><input type="number" id="editNrStartowy" placeholder="Numer startowy" step="1"></div>
+                        <div class="info-row"><span class="info-label">Numer startowy:</span><input type="text" id="editNrStartowy" placeholder="Numer startowy"></div>
+                        <div class="info-row"><span class="info-label">Email:</span><input type="email" id="editEmail" placeholder="Email"></div>
                         <div class="info-row">
                             <span class="info-label">Rezygnacja:</span>
                             <div class="checkbox-wrapper">
@@ -160,9 +176,12 @@
                         </div>
                     </div>
                     
-                    <div class="flex-btns">
+                    <div class="action-buttons">
                         <button id="saveEditBtn" class="success">💾 Zapisz zmiany</button>
+                        <button id="confirmPackageBtn" class="warning">✅ Potwierdź odbiór pakietu</button>
+                        <button id="toggleResignBtn" class="danger">❌ Zarejestruj rezygnację</button>
                         <button id="clearBtn" class="secondary">🔄 Wróć do skanowania</button>
+                        <button id="deletePlayerBtn" class="danger">🗑️ Usuń zawodnika</button>
                     </div>
                 </div>
             </div>
@@ -193,8 +212,9 @@
             </div>
             <div class="info-row"><span class="info-label">Konkurencja 1:</span><select id="newKonk1"></select></div>
             <div class="info-row"><span class="info-label">Konkurencja 2:</span><select id="newKonk2"></select></div>
-            <div class="info-row"><span class="info-label">Numer startowy:</span><input type="number" id="newNrStartowy" placeholder="Numer startowy" step="1"></div>
-            <div class="flex-btns" style="margin-top: 20px;">
+            <div class="info-row"><span class="info-label">Numer startowy:</span><input type="text" id="newNrStartowy" placeholder="Numer startowy"></div>
+            <div class="info-row"><span class="info-label">Email:</span><input type="email" id="newEmail" placeholder="Email"></div>
+            <div class="action-buttons" style="margin-top: 20px;">
                 <button id="saveNewBtn" class="success">💾 Zapisz nowego zawodnika</button>
                 <button onclick="closeAddModal()" class="secondary">Anuluj</button>
             </div>
@@ -204,28 +224,63 @@
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
     <script>
-    // ==================== KONFIGURACJA ====================
-    const API_URL = 'https://script.google.com/macros/s/AKfycbzefvaEHEVOSkogq2HjemmOAluIFhVqmnZvmvt1pB8clSlQqcZVyYmFOjZ9jwwL4ZQ9/exec'; // 🔁 PODMIEŃ!
+    // ==================== KONFIGURACJA FIREBASE ====================
+    // ⚠️ TUTAJ WPISZ SWOJĄ NOWĄ KONFIGURACJĘ Z FIREBASE CONSOLE ⚠️
+    const firebaseConfig = {
+        apiKey: "AIzaSyD2HMHEDyZ6jrUHwjv8wDaxd7swi9rtn2k",
+        authDomain: "zawodylekkoatletyczne.firebaseapp.com",
+        databaseURL: "https://zawodylekkoatletyczne-default-rtdb.firebaseio.com",
+        projectId: "zawodylekkoatletyczne",
+        storageBucket: "zawodylekkoatletyczne.firebasestorage.app",
+        messagingSenderId: "812081786407",
+        appId: "1:812081786407:web:7f820e436490693a9d2802"
+    };
+
+    let database;
+    let auth;
+    let isFirebaseConnected = false;
     
     let isLoggedIn = false;
     let konkurencjeList = [];
-    let currentRowIndex = null;
+    let currentPlayerId = null;
     let currentPlayerData = null;
     let html5QrCode = null;
     let isScanning = false;
     let currentPlec = '';
+    
+    // Inicjalizacja Firebase
+    try {
+        firebase.initializeApp(firebaseConfig);
+        database = firebase.database();
+        auth = firebase.auth();
+        
+        database.ref('.info/connected').on('value', (snap) => {
+            if (snap.val() === true) {
+                isFirebaseConnected = true;
+                setDebug('✅ Połączono z Firebase');
+            } else {
+                isFirebaseConnected = false;
+                setDebug('⚠️ Brak połączenia z Firebase');
+            }
+        });
+    } catch (e) {
+        console.error("Firebase init error:", e);
+        setDebug('❌ Błąd konfiguracji Firebase');
+    }
     
     // Elementy DOM
     const resultPanel = document.getElementById('resultPanel');
     const playerInfoDiv = document.getElementById('playerInfo');
     const debugMsg = document.getElementById('debugMsg');
     
+    const viewId = document.getElementById('viewId');
     const editImie = document.getElementById('editImie');
     const editNazwisko = document.getElementById('editNazwisko');
     const editRocznik = document.getElementById('editRocznik');
     const editKonk1 = document.getElementById('editKonk1');
     const editKonk2 = document.getElementById('editKonk2');
     const editNrStartowy = document.getElementById('editNrStartowy');
+    const editEmail = document.getElementById('editEmail');
     const editRezygnacja = document.getElementById('editRezygnacja');
     
     const startScanBtn = document.getElementById('startScanBtn');
@@ -235,9 +290,11 @@
     const confirmPackageBtn = document.getElementById('confirmPackageBtn');
     const toggleResignBtn = document.getElementById('toggleResignBtn');
     const clearBtn = document.getElementById('clearBtn');
+    const deletePlayerBtn = document.getElementById('deletePlayerBtn');
     const manualIdInput = document.getElementById('manualId');
     const openAddModalBtn = document.getElementById('openAddModalBtn');
     const saveNewBtn = document.getElementById('saveNewBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
     
     const searchNazwisko = document.getElementById('searchNazwisko');
     const searchByNazwiskoBtn = document.getElementById('searchByNazwiskoBtn');
@@ -264,51 +321,93 @@
         setTimeout(() => alertDiv.remove(), 4000);
     }
     
-    // ==================== LOGOWANIE ====================
-    async function login() {
-        const password = document.getElementById('passwordInput').value;
-        if (!password) {
-            document.getElementById('loginError').style.display = 'block';
-            document.getElementById('loginError').innerText = '❌ Wprowadź hasło';
-            return;
-        }
-        
-        setDebug('Weryfikacja hasła...');
-        
+    function playBeep() {
         try {
-            const response = await fetch(`${API_URL}?action=login&password=${encodeURIComponent(password)}&t=${Date.now()}`);
-            const result = await response.json();
-            
-            if (result.success) {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.frequency.value = 880;
+            gainNode.gain.value = 0.3;
+            oscillator.start();
+            setTimeout(() => { oscillator.stop(); audioCtx.close(); }, 200);
+        } catch(e) {}
+    }
+    
+    // ==================== LOGOWANIE ====================
+    function login(email, password) {
+        setDebug(`Próba logowania: ${email}`);
+        
+        auth.signInWithEmailAndPassword(email, password)
+            .then((userCredential) => {
                 isLoggedIn = true;
-                sessionStorage.setItem('isLoggedIn', 'true');
+                sessionStorage.setItem('firebaseLoggedIn', 'true');
                 document.getElementById('loginOverlay').style.display = 'none';
                 document.getElementById('mainContent').style.display = 'block';
                 initializeApp();
-                setDebug('✅ Zalogowano pomyślnie!');
-            } else {
+                setDebug(`✅ Zalogowano jako: ${userCredential.user.email}`);
+                showAlert(`✅ Zalogowano pomyślnie!`, false);
+            })
+            .catch((error) => {
+                console.error("Login error:", error);
                 document.getElementById('loginError').style.display = 'block';
-                document.getElementById('loginError').innerText = '❌ Nieprawidłowe hasło';
-                setDebug('❌ Nieprawidłowe hasło');
-            }
-        } catch(err) {
-            document.getElementById('loginError').style.display = 'block';
-            document.getElementById('loginError').innerText = '❌ Błąd połączenia';
-            setDebug(`❌ Błąd logowania: ${err.message}`);
-        }
+                document.getElementById('loginError').innerText = `❌ ${error.message}`;
+                setDebug(`❌ Błąd logowania: ${error.message}`);
+            });
     }
     
-    // Sprawdź czy użytkownik był już zalogowany
-    if (sessionStorage.getItem('isLoggedIn') === 'true') {
-        isLoggedIn = true;
-        document.getElementById('loginOverlay').style.display = 'none';
-        document.getElementById('mainContent').style.display = 'block';
-        initializeApp();
+    function logout() {
+        auth.signOut().then(() => {
+            isLoggedIn = false;
+            sessionStorage.removeItem('firebaseLoggedIn');
+            document.getElementById('loginOverlay').style.display = 'flex';
+            document.getElementById('mainContent').style.display = 'none';
+            
+            // Wyczyść dane
+            clearPanel();
+            if (html5QrCode && isScanning) {
+                stopScanner();
+            }
+            
+            document.getElementById('loginEmail').value = '';
+            document.getElementById('loginPassword').value = '';
+            document.getElementById('loginError').style.display = 'none';
+            
+            setDebug('✅ Wylogowano pomyślnie');
+            showAlert('✅ Wylogowano pomyślnie', false);
+        }).catch((error) => {
+            setDebug(`❌ Błąd wylogowania: ${error.message}`);
+        });
     }
+    
+    // Sprawdź stan autoryzacji przy starcie
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            // Użytkownik jest zalogowany
+            if (!isLoggedIn) {
+                isLoggedIn = true;
+                document.getElementById('loginOverlay').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                initializeApp();
+                setDebug(`✅ Witaj ponownie, ${user.email}`);
+            }
+        } else {
+            // Użytkownik nie jest zalogowany
+            if (isLoggedIn) {
+                // Wylogowano
+                isLoggedIn = false;
+                sessionStorage.removeItem('firebaseLoggedIn');
+            }
+            document.getElementById('loginOverlay').style.display = 'flex';
+            document.getElementById('mainContent').style.display = 'none';
+            setDebug('❌ Niezalogowany');
+        }
+    });
     
     // ==================== INICJALIZACJA ====================
     function initializeApp() {
-        setDebug('✅ Inicjalizacja aplikacji...');
+        setDebug('✅ Inicjalizacja aplikacji (Firebase + Auth)...');
         loadKonkurencje();
         setupPlecToggles();
         setDebug('✅ Aplikacja gotowa!');
@@ -358,10 +457,27 @@
     }
     
     function loadKonkurencje() {
-        konkurencjeList = [
-            "BIEG FOR FUN", "60 M", "200 M", "600 M", "SKOK W DAL", "Nie startuje"
-        ];
-        
+        if (database && isFirebaseConnected) {
+            database.ref('konkurencje').once('value').then(snapshot => {
+                const data = snapshot.val();
+                if (data && data.length > 0) {
+                    konkurencjeList = data;
+                } else {
+                    konkurencjeList = ["BIEG FOR FUN", "60 M", "200 M", "600 M", "SKOK W DAL", "Nie startuje"];
+                    database.ref('konkurencje').set(konkurencjeList);
+                }
+                populateKonkurencjeSelects();
+            }).catch(err => {
+                konkurencjeList = ["BIEG FOR FUN", "60 M", "200 M", "600 M", "SKOK W DAL", "Nie startuje"];
+                populateKonkurencjeSelects();
+            });
+        } else {
+            konkurencjeList = ["BIEG FOR FUN", "60 M", "200 M", "600 M", "SKOK W DAL", "Nie startuje"];
+            populateKonkurencjeSelects();
+        }
+    }
+    
+    function populateKonkurencjeSelects() {
         const selects = [editKonk1, editKonk2, document.getElementById('newKonk1'), document.getElementById('newKonk2')];
         selects.forEach(select => {
             if (select) {
@@ -372,65 +488,36 @@
         setDebug(`✅ Załadowano ${konkurencjeList.length} konkurencji`);
     }
     
-    function playBeep() {
-        try {
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-            oscillator.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-            oscillator.frequency.value = 880;
-            gainNode.gain.value = 0.3;
-            oscillator.start();
-            setTimeout(() => { oscillator.stop(); audioCtx.close(); }, 200);
-        } catch(e) {}
-    }
-    
-    // ==================== ZAPYTANIA DO API ====================
-    function addAuth(url) {
-        const separator = url.includes('?') ? '&' : '?';
-        return `${url}${separator}logged_in=true&t=${Date.now()}`;
-    }
-    
+    // ==================== OPERACJE NA FIREBASE ====================
     async function fetchPlayerById(id) {
-        if (!isLoggedIn) {
-            showAlert("❌ Nie jesteś zalogowany!");
+        if (!isFirebaseConnected) {
+            showAlert("❌ Brak połączenia z Firebase");
             return null;
         }
         
         try {
             setDebug(`Pobieranie ID: ${id}`);
-            let url = `${API_URL}?id=${encodeURIComponent(id)}`;
-            url = addAuth(url);
-            const response = await fetch(url);
-            const text = await response.text();
-            setDebug(`Odpowiedź: ${text.substring(0, 150)}`);
-            return JSON.parse(text);
+            const snapshot = await database.ref(`zawodnicy/${id}`).once('value');
+            const data = snapshot.val();
+            
+            if (data) {
+                return { success: true, data: { ...data, id: id } };
+            } else {
+                return { success: false, error: "Nie znaleziono zawodnika" };
+            }
         } catch(err) {
             setDebug(`❌ Błąd: ${err.message}`);
-            showAlert(`Błąd: ${err.message}`);
-            return null;
+            return { success: false, error: err.message };
         }
     }
     
-    async function updatePlayer(updatesObj) {
-        if(!currentRowIndex) return false;
-        if (!isLoggedIn) return false;
+    async function updatePlayer(id, updates) {
+        if (!isFirebaseConnected) return false;
         
         try {
-            const params = new URLSearchParams();
-            params.append('method', 'update');
-            params.append('rowIndex', currentRowIndex);
-            for (let [key, value] of Object.entries(updatesObj)) params.append(key, value);
-            let url = `${API_URL}?${params.toString()}`;
-            url = addAuth(url);
-            const response = await fetch(url);
-            const result = await response.json();
-            if(result.success) {
-                showAlert("✅ Zaktualizowano!", false);
-                return true;
-            }
-            return false;
+            await database.ref(`zawodnicy/${id}`).update(updates);
+            setDebug(`✅ Zaktualizowano: ${id}`);
+            return true;
         } catch(err) {
             showAlert(`Błąd: ${err.message}`);
             return false;
@@ -438,8 +525,8 @@
     }
     
     async function addNewZawodnik() {
-        if (!isLoggedIn) {
-            showAlert("❌ Nie jesteś zalogowany!");
+        if (!isFirebaseConnected) {
+            showAlert("❌ Brak połączenia z Firebase");
             return;
         }
         
@@ -450,249 +537,69 @@
         const konkurencja1 = document.getElementById('newKonk1').value;
         const konkurencja2 = document.getElementById('newKonk2').value;
         const nrStartowy = document.getElementById('newNrStartowy').value.trim();
+        const email = document.getElementById('newEmail').value.trim();
         
         if (!imie || !nazwisko) { showAlert("Imię i nazwisko wymagane!"); return; }
         if (!plec) { showAlert("Wybierz płeć!"); return; }
         
-        const params = new URLSearchParams();
-        params.append('action', 'add');
-        params.append('imie', imie);
-        params.append('nazwisko', nazwisko);
-        params.append('rocznik', rocznik);
-        params.append('plec', plec);
-        params.append('konkurencja1', konkurencja1);
-        params.append('konkurencja2', konkurencja2);
-        params.append('nr_startowy', nrStartowy);
+        const newId = Date.now().toString() + Math.floor(Math.random() * 1000).toString();
         
-        let url = `${API_URL}?${params.toString()}`;
-        url = addAuth(url);
+        const newPlayer = {
+            id: newId,
+            imie: imie.toUpperCase(),
+            nazwisko: nazwisko.toUpperCase(),
+            rocznik: rocznik || "",
+            plec: plec,
+            konkurencja1: konkurencja1 || "",
+            konkurencja2: konkurencja2 || "",
+            nr_startowy: nrStartowy || "",
+            email: email || "",
+            pakiet_odebrany: "NIE",
+            rezygnacja: "FALSE"
+        };
         
         try {
-            const response = await fetch(url);
-            const result = await response.json();
-            if (result.success) {
-                showAlert(`✅ Dodano! Nowe ID: ${result.newId}`, false);
-                clearAddForm();
-                closeAddModal();
-                handleIdFound(result.newId);
-            } else {
-                showAlert(`❌ Błąd: ${result.error}`);
-            }
+            await database.ref(`zawodnicy/${newId}`).set(newPlayer);
+            showAlert(`✅ Dodano! Nowe ID: ${newId}`, false);
+            clearAddForm();
+            closeAddModal();
+            handleIdFound(newId);
         } catch(err) {
             showAlert(`Błąd: ${err.message}`);
         }
     }
     
-    function clearAddForm() {
-        document.getElementById('newImie').value = '';
-        document.getElementById('newNazwisko').value = '';
-        document.getElementById('newRocznik').value = '';
-        document.getElementById('newPlecGroup').querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
-        document.getElementById('newKonk1').value = '';
-        document.getElementById('newKonk2').value = '';
-        document.getElementById('newNrStartowy').value = '';
+    async function deletePlayer(id) {
+        if (!isFirebaseConnected) return false;
+        
+        try {
+            await database.ref(`zawodnicy/${id}`).remove();
+            setDebug(`🗑️ Usunięto: ${id}`);
+            return true;
+        } catch(err) {
+            showAlert(`Błąd usuwania: ${err.message}`);
+            return false;
+        }
     }
     
-    function openAddModal() { document.getElementById('addModal').style.display = 'flex'; }
-    function closeAddModal() { document.getElementById('addModal').style.display = 'none'; }
-    
     async function searchByNazwisko() {
-        if (!isLoggedIn) {
-            showAlert("❌ Nie jesteś zalogowany!");
+        if (!isFirebaseConnected) {
+            showAlert("❌ Brak połączenia z Firebase");
             return;
         }
         
-        const nazwisko = searchNazwisko.value.trim();
+        const nazwisko = searchNazwisko.value.trim().toUpperCase();
         if (!nazwisko) { showAlert("Wprowadź nazwisko"); return; }
+        
         setDebug(`🔍 Szukam: ${nazwisko}`);
         searchResults.style.display = 'block';
         resultsList.innerHTML = '<div style="text-align:center; padding: 20px;">🔍 Szukam...</div>';
+        
         try {
-            let url = `${API_URL}?search=nazwisko&nazwisko=${encodeURIComponent(nazwisko)}`;
-            url = addAuth(url);
-            const results = await (await fetch(url)).json();
-            if (results.error) {
-                resultsList.innerHTML = `<div style="text-align:center; padding: 20px;">❌ ${results.error}</div>`;
-                return;
-            }
-            if (results.length === 0) {
-                resultsList.innerHTML = '<div style="text-align:center; padding: 20px;">❌ Nie znaleziono</div>';
-                return;
-            }
-            resultsList.innerHTML = results.map(player => `
-                <div onclick="selectPlayer(${player.rowIndex}, '${player.ID}')" class="search-result-item">
-                    <div style="font-weight: bold;">${player.Imię} ${player.Nazwisko}</div>
-                    <div style="font-size: 0.85rem;">ID: ${player.ID} | Nr: ${player.Nr_startowy || 'brak'}</div>
-                </div>
-            `).join('');
-        } catch(err) { 
-            resultsList.innerHTML = '<div style="text-align:center; padding: 20px;">❌ Błąd</div>';
-            setDebug(`Błąd: ${err.message}`);
-        }
-    }
-    
-    window.selectPlayer = async function(rowIndex, id) {
-        searchResults.style.display = 'none';
-        searchNazwisko.value = '';
-        const result = await fetchPlayerById(id);
-        if(result?.success) {
-            currentRowIndex = result.rowIndex;
-            currentPlayerData = result.data;
-            resultPanel.style.display = 'block';
-            renderPlayerPanel(result);
-            showAlert(`✅ Wybrano: ${result.data.Imię} ${result.data.Nazwisko}`, false);
-            playBeep();
-        } else {
-            showAlert(result?.error || "Nie udało się pobrać danych");
-        }
-    };
-    
-    function renderPlayerPanel(dataObj) {
-        const d = dataObj.data;
-        const isTaken = d.Pakiet_Odebrany === 'TAK';
-        const isResigned = String(d.Rezygnacja || '').toUpperCase() === 'TRUE';
-        
-        playerInfoDiv.innerHTML = `
-            <div class="info-row"><span class="info-label">ID:</span><span class="info-value">${d.ID || ''}</span></div>
-            <div class="info-row"><span class="info-label">Imię i nazwisko:</span><span class="info-value">${d.Imię || ''} ${d.Nazwisko || ''}</span></div>
-            <div class="info-row"><span class="info-label">Rocznik:</span><span class="info-value">${d.Rocznik || '—'}</span></div>
-            <div class="info-row"><span class="info-label">Płeć:</span><span class="info-value">${d.Płeć === 'M' ? 'Mężczyzna' : (d.Płeć === 'K' ? 'Kobieta' : '—')}</span></div>
-            <div class="info-row"><span class="info-label">Konkurencje:</span><span class="info-value">${d.Konkurencja1 || '—'} ${d.Konkurencja2 ? '/ ' + d.Konkurencja2 : ''}</span></div>
-            <div class="info-row"><span class="info-label">Numer startowy:</span><span class="info-value">${d.Nr_startowy || 'Nieprzydzielony'}</span></div>
-            <div class="info-row"><span class="info-label">Status pakietu:</span><span class="package-status ${isTaken ? '' : 'package-absent'}">${isTaken ? '✅ ODEBRANY' : '❌ NIEODEBRANY'}</span></div>
-            <div class="info-row"><span class="info-label">Rezygnacja:</span><span class="${isResigned ? 'resign-status-true' : 'resign-status-false'}">${isResigned ? '❌ ZREZYGNOWAŁ' : '✅ AKTYWNY'}</span></div>
-        `;
-        
-        confirmPackageBtn.style.opacity = isTaken ? '0.6' : '1';
-        toggleResignBtn.textContent = isResigned ? '🔄 Cofnij rezygnację' : '❌ Zarejestruj rezygnację';
-        toggleResignBtn.style.background = isResigned ? '#10b981' : '#ef4444';
-        
-        editImie.value = d.Imię || '';
-        editNazwisko.value = d.Nazwisko || '';
-        editRocznik.value = d.Rocznik || '';
-        setPlecToggle(d.Płeć || '');
-        if (d.Konkurencja1) editKonk1.value = d.Konkurencja1;
-        if (d.Konkurencja2) editKonk2.value = d.Konkurencja2;
-        editNrStartowy.value = d.Nr_startowy || '';
-        editRezygnacja.checked = isResigned;
-    }
-    
-    async function handleIdFound(id) {
-        if (!isLoggedIn) {
-            showAlert("❌ Nie jesteś zalogowany!");
-            return;
-        }
-        
-        setDebug(`✨ ID: ${id}`);
-        playBeep();
-        stopScanner();
-        const result = await fetchPlayerById(id);
-        if(result?.success) {
-            currentRowIndex = result.rowIndex;
-            currentPlayerData = result.data;
-            resultPanel.style.display = 'block';
-            renderPlayerPanel(result);
-            showAlert(`✅ Znaleziono: ${result.data.Imię} ${result.data.Nazwisko}`, false);
-        } else {
-            resultPanel.style.display = 'none';
-            showAlert(result?.error || "Nie znaleziono zawodnika");
-        }
-    }
-    
-    async function saveEdits() {
-        if(!currentRowIndex) return;
-        const updates = {};
-        if(editImie.value !== (currentPlayerData?.Imię || '')) updates.Imię = editImie.value;
-        if(editNazwisko.value !== (currentPlayerData?.Nazwisko || '')) updates.Nazwisko = editNazwisko.value;
-        if(editRocznik.value !== (currentPlayerData?.Rocznik || '')) updates.Rocznik = editRocznik.value;
-        if(currentPlec !== (currentPlayerData?.Płeć || '')) updates.Płeć = currentPlec;
-        if(editKonk1.value !== (currentPlayerData?.Konkurencja1 || '')) updates.Konkurencja1 = editKonk1.value;
-        if(editKonk2.value !== (currentPlayerData?.Konkurencja2 || '')) updates.Konkurencja2 = editKonk2.value;
-        if(editNrStartowy.value !== (currentPlayerData?.Nr_startowy || '')) updates.Nr_startowy = editNrStartowy.value;
-        
-        const newResign = editRezygnacja.checked ? 'TRUE' : 'FALSE';
-        if(newResign !== (currentPlayerData?.Rezygnacja || 'FALSE')) updates.Rezygnacja = newResign;
-        
-        if(Object.keys(updates).length === 0) { showAlert("Brak zmian", false); return; }
-        if(await updatePlayer(updates) && currentPlayerData?.ID) {
-            const refreshed = await fetchPlayerById(currentPlayerData.ID);
-            if(refreshed?.success) { currentPlayerData = refreshed.data; renderPlayerPanel(refreshed); }
-        }
-    }
-    
-    async function confirmPackage() {
-        if(!currentRowIndex) return;
-        if(currentPlayerData?.Pakiet_Odebrany === 'TAK') { showAlert("Pakiet już odebrany!", false); return; }
-        if(await updatePlayer({ Pakiet_Odebrany: 'TAK' }) && currentPlayerData?.ID) {
-            const refreshed = await fetchPlayerById(currentPlayerData.ID);
-            if(refreshed?.success) { currentPlayerData = refreshed.data; renderPlayerPanel(refreshed); showAlert("✅ Pakiet odebrany!", false); playBeep(); }
-        }
-    }
-    
-    async function toggleResign() {
-        if(!currentRowIndex) return;
-        const currentResign = currentPlayerData?.Rezygnacja === 'TRUE';
-        const newResign = !currentResign;
-        if(confirm(`Czy na pewno chcesz ${newResign ? 'zarejestrować rezygnację' : 'cofnąć rezygnację'}?`)) {
-            if(await updatePlayer({ Rezygnacja: newResign ? 'TRUE' : 'FALSE' }) && currentPlayerData?.ID) {
-                const refreshed = await fetchPlayerById(currentPlayerData.ID);
-                if(refreshed?.success) { currentPlayerData = refreshed.data; renderPlayerPanel(refreshed); playBeep(); }
-            }
-        }
-    }
-    
-    function clearPanel() {
-        resultPanel.style.display = 'none';
-        currentRowIndex = null;
-        currentPlayerData = null;
-        manualIdInput.value = '';
-        searchResults.style.display = 'none';
-        searchNazwisko.value = '';
-        setDebug('Panel wyczyszczony');
-    }
-    
-    async function startScanner() {
-        if (isScanning) return;
-        if (!navigator.mediaDevices?.getUserMedia) { showAlert('Brak kamery'); return; }
-        if (html5QrCode) { try { await html5QrCode.stop(); } catch(e) {} }
-        html5QrCode = new Html5Qrcode("reader");
-        try {
-            await html5QrCode.start({ facingMode: "environment" }, { fps: 15, qrbox: { width: 250, height: 250 } },
-                (text) => handleIdFound(text.trim()), () => {});
-            isScanning = true;
-            startScanBtn.style.display = 'none';
-            stopScanBtn.style.display = 'inline-block';
-            setDebug('✅ Skaner uruchomiony');
-        } catch (err) { showAlert('Nie można uruchomić kamery'); }
-    }
-    
-    async function stopScanner() {
-        if (html5QrCode && isScanning) { try { await html5QrCode.stop(); } catch(e) {} isScanning = false; }
-        startScanBtn.style.display = 'inline-block';
-        stopScanBtn.style.display = 'none';
-        setDebug('Skaner zatrzymany');
-    }
-    
-    // Event listeners
-    document.getElementById('loginBtn').addEventListener('click', login);
-    document.getElementById('passwordInput').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') login();
-    });
-    
-    startScanBtn?.addEventListener('click', startScanner);
-    stopScanBtn?.addEventListener('click', stopScanner);
-    manualSearchBtn?.addEventListener('click', () => { const id = manualIdInput.value.trim(); if(id) handleIdFound(id); else showAlert("Wprowadź ID"); });
-    saveEditBtn?.addEventListener('click', saveEdits);
-    confirmPackageBtn?.addEventListener('click', confirmPackage);
-    toggleResignBtn?.addEventListener('click', toggleResign);
-    clearBtn?.addEventListener('click', clearPanel);
-    searchByNazwiskoBtn?.addEventListener('click', searchByNazwisko);
-    searchNazwisko?.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchByNazwisko(); });
-    openAddModalBtn?.addEventListener('click', openAddModal);
-    saveNewBtn?.addEventListener('click', addNewZawodnik);
-    window.addEventListener('click', (e) => { if (e.target === document.getElementById('addModal')) closeAddModal(); });
-    
-    setDebug('✅ Aplikacja załadowana, oczekuje na logowanie...');
-    </script>
-</body>
-</html>
+            const snapshot = await database.ref('zawodnicy').once('value');
+            const data = snapshot.val();
+            const results = [];
+            
+            for (const [id, player] of Object.entries(data || {})) {
+                if (player.nazwisko && player.nazwisko.toUpperCase().includes(nazwisko)) {
+                    results.push({ id: id, ...player
