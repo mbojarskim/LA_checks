@@ -247,6 +247,9 @@
     let isScanning = false;
     let currentPlec = '';
     
+    // Mapowanie kategorii (rocznik -> kategoria wiekowa)
+    let mapowanieKategorii = {};
+
     // Inicjalizacja Firebase
     try {
         firebase.initializeApp(firebaseConfig);
@@ -334,6 +337,37 @@
         } catch(e) {}
     }
     
+    // ==================== MAPOWANIE KATEGORII ====================
+    function loadMapowanieKategorii() {
+        if (!database) return;
+        database.ref('mapowanie_kategorii').once('value').then(snapshot => {
+            const data = snapshot.val();
+            if (data && Object.keys(data).length > 0) {
+                mapowanieKategorii = data;
+            } else {
+                // Domyślne mapowanie (przykładowe progi)
+                for (let i = 2026; i >= 1898; i--) {
+                    if (i >= 2022) mapowanieKategorii[i] = "00-04";
+                    else if (i >= 2020) mapowanieKategorii[i] = "05-06";
+                    else if (i >= 2017) mapowanieKategorii[i] = "07-09";
+                    else if (i >= 2014) mapowanieKategorii[i] = "10-12";
+                    else if (i >= 2010) mapowanieKategorii[i] = "13-16";
+                    else mapowanieKategorii[i] = "OPEN";
+                }
+            }
+            setDebug(`✅ Załadowano mapowanie kategorii (${Object.keys(mapowanieKategorii).length} wpisów)`);
+        }).catch(err => setDebug(`❌ Błąd ładowania mapowania kategorii: ${err.message}`));
+    }
+    
+    function getKategoriaZRocznika(rocznik) {
+        if (!rocznik) return "OPEN";
+        const rocznikStr = rocznik.toString();
+        if (mapowanieKategorii[rocznikStr]) {
+            return mapowanieKategorii[rocznikStr];
+        }
+        return "OPEN";
+    }
+    
     // ==================== LOGOWANIE ====================
     function login(email, password) {
         setDebug(`Próba logowania: ${email}`);
@@ -404,6 +438,7 @@
     function initializeApp() {
         setDebug('✅ Inicjalizacja aplikacji (Firebase + Auth)...');
         loadKonkurencje();
+        loadMapowanieKategorii();
         setupPlecToggles();
         setDebug('✅ Aplikacja gotowa!');
     }
@@ -539,12 +574,18 @@
         
         const newId = Date.now().toString() + Math.floor(Math.random() * 1000).toString();
         
+        // Oblicz kategorię wiekową i pełną kategorię
+        const kategoriaWiekowa = getKategoriaZRocznika(rocznik);
+        const pelnaKategoria = (plec === 'M' || plec === 'K') ? `${plec} ${kategoriaWiekowa}` : '';
+        
         const newPlayer = {
             id: newId,
             imie: imie.toUpperCase(),
             nazwisko: nazwisko.toUpperCase(),
             rocznik: rocznik || "",
             plec: plec,
+            kategoria_wiekowa: kategoriaWiekowa,
+            pelna_kategoria: pelnaKategoria,
             konkurencja1: konkurencja1 || "",
             konkurencja2: konkurencja2 || "",
             nr_startowy: nrStartowy || "",
@@ -650,6 +691,7 @@
             <div class="info-row"><span class="info-label">Imię i nazwisko:</span><span class="info-value">${d.imie || ''} ${d.nazwisko || ''}</span></div>
             <div class="info-row"><span class="info-label">Rocznik:</span><span class="info-value">${d.rocznik || '—'}</span></div>
             <div class="info-row"><span class="info-label">Płeć:</span><span class="info-value">${d.plec === 'M' ? 'Mężczyzna' : (d.plec === 'K' ? 'Kobieta' : '—')}</span></div>
+            <div class="info-row"><span class="info-label">Kategoria:</span><span class="info-value">${d.pelna_kategoria || d.kategoria_wiekowa || '—'}</span></div>
             <div class="info-row"><span class="info-label">Konkurencje:</span><span class="info-value">${d.konkurencja1 || '—'} ${d.konkurencja2 ? '/ ' + d.konkurencja2 : ''}</span></div>
             <div class="info-row"><span class="info-label">Numer startowy:</span><span class="info-value">${d.nr_startowy || 'Nieprzydzielony'}</span></div>
             <div class="info-row"><span class="info-label">Email:</span><span class="info-value">${d.email || '—'}</span></div>
@@ -692,19 +734,43 @@
     async function saveEdits() {
         if(!currentPlayerId) return;
         const updates = {};
-        if(editImie.value !== (currentPlayerData?.imie || '')) updates.imie = editImie.value.toUpperCase();
-        if(editNazwisko.value !== (currentPlayerData?.nazwisko || '')) updates.nazwisko = editNazwisko.value.toUpperCase();
-        if(editRocznik.value !== (currentPlayerData?.rocznik || '')) updates.rocznik = editRocznik.value;
-        if(currentPlec !== (currentPlayerData?.plec || '')) updates.plec = currentPlec;
-        if(editKonk1.value !== (currentPlayerData?.konkurencja1 || '')) updates.konkurencja1 = editKonk1.value;
-        if(editKonk2.value !== (currentPlayerData?.konkurencja2 || '')) updates.konkurencja2 = editKonk2.value;
-        if(editNrStartowy.value !== (currentPlayerData?.nr_startowy || '')) updates.nr_startowy = editNrStartowy.value;
-        if(editEmail.value !== (currentPlayerData?.email || '')) updates.email = editEmail.value;
         
+        const newImie = editImie.value;
+        const newNazwisko = editNazwisko.value;
+        const newRocznik = editRocznik.value;
+        const newPlec = currentPlec;
+        const newKonk1 = editKonk1.value;
+        const newKonk2 = editKonk2.value;
+        const newNrStartowy = editNrStartowy.value;
+        const newEmail = editEmail.value;
         const newResign = editRezygnacja.checked ? 'TRUE' : 'FALSE';
+        
+        if(newImie !== (currentPlayerData?.imie || '')) updates.imie = newImie.toUpperCase();
+        if(newNazwisko !== (currentPlayerData?.nazwisko || '')) updates.nazwisko = newNazwisko.toUpperCase();
+        if(newRocznik !== (currentPlayerData?.rocznik || '')) updates.rocznik = newRocznik;
+        if(newPlec !== (currentPlayerData?.plec || '')) updates.plec = newPlec;
+        if(newKonk1 !== (currentPlayerData?.konkurencja1 || '')) updates.konkurencja1 = newKonk1;
+        if(newKonk2 !== (currentPlayerData?.konkurencja2 || '')) updates.konkurencja2 = newKonk2;
+        if(newNrStartowy !== (currentPlayerData?.nr_startowy || '')) updates.nr_startowy = newNrStartowy;
+        if(newEmail !== (currentPlayerData?.email || '')) updates.email = newEmail;
         if(newResign !== (currentPlayerData?.rezygnacja || 'FALSE')) updates.rezygnacja = newResign;
         
-        if(Object.keys(updates).length === 0) { showAlert("Brak zmian", false); return; }
+        // Jeśli zmienił się rocznik lub płeć – przelicz kategorię
+        const rocznikChanged = (newRocznik !== (currentPlayerData?.rocznik || ''));
+        const plecChanged = (newPlec !== (currentPlayerData?.plec || ''));
+        
+        if (rocznikChanged || plecChanged) {
+            const kategoriaWiekowa = getKategoriaZRocznika(newRocznik);
+            const pelnaKategoria = (newPlec === 'M' || newPlec === 'K') ? `${newPlec} ${kategoriaWiekowa}` : '';
+            updates.kategoria_wiekowa = kategoriaWiekowa;
+            updates.pelna_kategoria = pelnaKategoria;
+        }
+        
+        if(Object.keys(updates).length === 0) { 
+            showAlert("Brak zmian", false); 
+            return; 
+        }
+        
         if(await updatePlayer(currentPlayerId, updates)) {
             const refreshed = await fetchPlayerById(currentPlayerId);
             if(refreshed?.success) { 
@@ -788,7 +854,6 @@
     }
     
     // ==================== EVENT LISTENERS ====================
-    // Logowanie
     const loginBtnElement = document.getElementById('loginBtn');
     const loginEmailElement = document.getElementById('loginEmail');
     const loginPasswordElement = document.getElementById('loginPassword');
@@ -821,7 +886,6 @@
         });
     }
     
-    // Pozostałe listenery
     startScanBtn?.addEventListener('click', startScanner);
     stopScanBtn?.addEventListener('click', stopScanner);
     manualSearchBtn?.addEventListener('click', () => { const id = manualIdInput.value.trim(); if(id) handleIdFound(id); else showAlert("Wprowadź ID"); });
