@@ -696,7 +696,7 @@
             <div class="info-row"><span class="info-label">Numer startowy:</span><span class="info-value">${d.nr_startowy || 'Nieprzydzielony'}</span></div>
             <div class="info-row"><span class="info-label">Email:</span><span class="info-value">${d.email || '—'}</span></div>
             <div class="info-row"><span class="info-label">Status pakietu:</span><span class="package-status ${isTaken ? '' : 'package-absent'}">${isTaken ? '✅ ODEBRANY' : '❌ NIEODEBRANY'}</span></div>
-            <div class="info-row"><span class="info-label">Rezygnacja:</span><span class="${isResigned ? 'resign-status-true' : 'resign-status-false'}">${isResigned ? '❌ ZREZYGNOWAŁ' : '✅ AKTYWNY'}</span></div>
+            <div class="info-row"><span class="info-label">Rezygnacja/Aktywny:</span><span class="${isResigned ? 'resign-status-true' : 'resign-status-false'}">${isResigned ? '❌ ZREZYGNOWAŁ' : '✅ AKTYWNY'}</span></div>
         `;
         
         confirmPackageBtn.style.opacity = isTaken ? '0.6' : '1';
