@@ -158,19 +158,19 @@
                     <div class="edit-group">
                         <h4>✏️ Edycja danych</h4>
                         <div class="info-row"><span class="info-label">ID:</span><span class="info-value" id="viewId">-</span></div>
-                        <div class="info-row"><span class="info-label">Imię:</span><input type="text" id="editImie" placeholder="Imię"></div>
-                        <div class="info-row"><span class="info-label">Nazwisko:</span><input type="text" id="editNazwisko" placeholder="Nazwisko"></div>
-                        <div class="info-row"><span class="info-label">Rocznik:</span><input type="number" id="editRocznik" placeholder="Rocznik" step="1"></div>
-                        <div class="info-row">
-                            <span class="info-label">Płeć:</span>
-                            <div class="toggle-group" id="editPlecGroup">
+                        <div class="info-row"><span class="info-label">Imię:<span style="color:red;"> *</span></span><input type="text" id="editImie" placeholder="Imię"></div>
+                        <div class="info-row"><span class="info-label">Nazwisko:<span style="color:red;"> *</span></span><input type="text" id="editNazwisko" placeholder="Nazwisko"></div>
+                        <div class="info-row"><span class="info-label">Rocznik:<span style="color:red;"> *</span></span><input type="number" id="editRocznik" placeholder="Rocznik" step="1"></div>
+						<div class="info-row">
+                            <span class="info-label">Płeć:<span style="color:red;"> *</span></span>
+							<div class="toggle-group" id="editPlecGroup">
                                 <button type="button" class="toggle-btn M" data-plec="M">Mężczyzna</button>
                                 <button type="button" class="toggle-btn K" data-plec="K">Kobieta</button>
                             </div>
                         </div>
-                        <div class="info-row"><span class="info-label">Konkurencja 1:</span><select id="editKonk1"></select></div>
+                        <div class="info-row"><span class="info-label">Konkurencja 1:<span style="color:red;"> *</span></span><select id="editKonk1"></select></div>
                         <div class="info-row"><span class="info-label">Konkurencja 2:</span><select id="editKonk2"></select></div>
-                        <div class="info-row"><span class="info-label">Numer startowy:</span><input type="text" id="editNrStartowy" placeholder="Numer startowy"></div>
+                        <div class="info-row"><span class="info-label">Numer startowy:<span style="color:red;"> *</span></span><input type="text" id="editNrStartowy" placeholder="Numer startowy"></div>
                         <div class="info-row"><span class="info-label">Email:</span><input type="email" id="editEmail" placeholder="Email"></div>
                         <div class="info-row">
                             <span class="info-label">Rezygnacja/Aktywny:</span>
@@ -205,19 +205,19 @@
                 <h3>➕ Dodaj nowego zawodnika</h3>
                 <button class="close-modal" onclick="closeAddModal()">✖</button>
             </div>
-            <div class="info-row"><span class="info-label">Imię:</span><input type="text" id="newImie" placeholder="Imię"></div>
-            <div class="info-row"><span class="info-label">Nazwisko:</span><input type="text" id="newNazwisko" placeholder="Nazwisko"></div>
-            <div class="info-row"><span class="info-label">Rocznik:</span><input type="number" id="newRocznik" placeholder="Rocznik" step="1"></div>
-            <div class="info-row">
-                <span class="info-label">Płeć:</span>
-                <div class="toggle-group" id="newPlecGroup">
+            <div class="info-row"><span class="info-label">Imię:<span style="color:red;"> *</span></span><input type="text" id="newImie" placeholder="Imię"></div>
+			<div class="info-row"><span class="info-label">Nazwisko:<span style="color:red;"> *</span></span><input type="text" id="newNazwisko" placeholder="Nazwisko"></div>
+			<div class="info-row"><span class="info-label">Rocznik:<span style="color:red;"> *</span></span><input type="number" id="newRocznik" placeholder="Rocznik" step="1"></div>
+			<div class="info-row">
+                <span class="info-label">Płeć:<span style="color:red;"> *</span></span>
+					<div class="toggle-group" id="newPlecGroup">
                     <button type="button" class="toggle-btn M" data-plec="M">Mężczyzna</button>
                     <button type="button" class="toggle-btn K" data-plec="K">Kobieta</button>
                 </div>
             </div>
-            <div class="info-row"><span class="info-label">Konkurencja 1:</span><select id="newKonk1"></select></div>
+            <div class="info-row"><span class="info-label">Konkurencja 1:<span style="color:red;"> *</span></span><select id="newKonk1"></select></div>
             <div class="info-row"><span class="info-label">Konkurencja 2:</span><select id="newKonk2"></select></div>
-            <div class="info-row"><span class="info-label">Numer startowy:</span><input type="text" id="newNrStartowy" placeholder="Numer startowy"></div>
+            <div class="info-row"><span class="info-label">Numer startowy:<span style="color:red;"> *</span></span><input type="text" id="newNrStartowy" placeholder="Numer startowy"></div>
             <div class="info-row"><span class="info-label">Email:</span><input type="email" id="newEmail" placeholder="Email"></div>
             <div class="action-buttons" style="margin-top: 20px;">
                 <button id="saveNewBtn" class="success">💾 Zapisz nowego zawodnika</button>
@@ -318,6 +318,12 @@
         console.log(msg);
     }
     
+	function czyKonkurencjeRozne(konk1, konk2) {
+		if (!konk1 || !konk2) return true; // jeśli puste, uznajemy za OK
+		return konk1 !== konk2;
+	}
+	
+	
     function showAlert(msg, isError = true) {
         const oldAlert = document.querySelector('.alert');
         if(oldAlert) oldAlert.remove();
@@ -560,56 +566,84 @@
     }
     
     async function addNewZawodnik() {
-        if (!isFirebaseConnected) {
-            showAlert("❌ Brak połączenia z Firebase");
-            return;
-        }
-        
-        const imie = document.getElementById('newImie').value.trim();
-        const nazwisko = document.getElementById('newNazwisko').value.trim();
-        const rocznik = document.getElementById('newRocznik').value.trim();
-        const plec = getSelectedPlec('newPlecGroup');
-        const konkurencja1 = document.getElementById('newKonk1').value;
-        const konkurencja2 = document.getElementById('newKonk2').value;
-        const nrStartowy = document.getElementById('newNrStartowy').value.trim();
-        const email = document.getElementById('newEmail').value.trim();
-        
-        if (!imie || !nazwisko) { showAlert("Imię i nazwisko wymagane!"); return; }
-        if (!plec) { showAlert("Wybierz płeć!"); return; }
-        
-        const newId = Date.now().toString() + Math.floor(Math.random() * 1000).toString();
-        
-        // Oblicz kategorię wiekową i pełną kategorię
-        const kategoriaWiekowa = getKategoriaZRocznika(rocznik);
-        const pelnaKategoria = (plec === 'M' || plec === 'K') ? `${plec} ${kategoriaWiekowa}` : '';
-        
-        const newPlayer = {
-            id: newId,
-            imie: imie.toUpperCase(),
-            nazwisko: nazwisko.toUpperCase(),
-            rocznik: rocznik || "",
-            plec: plec,
-            kategoria_wiekowa: kategoriaWiekowa,
-            pelna_kategoria: pelnaKategoria,
-            konkurencja1: konkurencja1 || "",
-            konkurencja2: konkurencja2 || "",
-            nr_startowy: nrStartowy || "",
-            email: email || "",
-            pakiet_odebrany: "TAK",
-            rezygnacja: "FALSE"
-        };
-        
-        try {
-            await database.ref(`zawodnicy/${newId}`).set(newPlayer);
-            showAlert(`✅ Dodano! Nowe ID: ${newId}`, false);
-            clearAddForm();
-            closeAddModal();
-            handleIdFound(newId);
-        } catch(err) {
-            showAlert(`Błąd: ${err.message}`);
-        }
+    if (!isFirebaseConnected) {
+        showAlert("❌ Brak połączenia z Firebase");
+        return;
     }
     
+    const imie = document.getElementById('newImie').value.trim();
+    const nazwisko = document.getElementById('newNazwisko').value.trim();
+    const rocznik = document.getElementById('newRocznik').value.trim();
+    const plec = getSelectedPlec('newPlecGroup');
+    const konkurencja1 = document.getElementById('newKonk1').value;
+    const konkurencja2 = document.getElementById('newKonk2').value;
+    const nrStartowy = document.getElementById('newNrStartowy').value.trim();
+    const email = document.getElementById('newEmail').value.trim();
+    
+    // === WALIDACJA PÓL OBOWIĄZKOWYCH ===
+    if (!imie) {
+        showAlert("❌ Imię jest wymagane!", true);
+        return;
+    }
+    if (!nazwisko) {
+        showAlert("❌ Nazwisko jest wymagane!", true);
+        return;
+    }
+    if (!rocznik) {
+        showAlert("❌ Rocznik jest wymagany!", true);
+        return;
+    }
+    if (!plec) {
+        showAlert("❌ Płeć jest wymagana!", true);
+        return;
+    }
+    if (!konkurencja1) {
+        showAlert("❌ Konkurencja 1 jest wymagana!", true);
+        return;
+    }
+    if (!nrStartowy) {
+        showAlert("❌ Numer startowy jest wymagany!", true);
+        return;
+    }
+    
+    // Sprawdzenie, czy konkurencje nie są takie same (jeśli podano drugą)
+    if (konkurencja1 && konkurencja2 && konkurencja1 === konkurencja2) {
+        showAlert("❌ Konkurencja 1 i Konkurencja 2 nie mogą być takie same!", true);
+        return;
+    }
+    
+    const newId = Date.now().toString() + Math.floor(Math.random() * 1000).toString();
+    
+    const kategoriaWiekowa = getKategoriaZRocznika(rocznik);
+    const pelnaKategoria = (plec === 'M' || plec === 'K') ? `${plec} ${kategoriaWiekowa}` : '';
+    
+    const newPlayer = {
+        id: newId,
+        imie: imie.toUpperCase(),
+        nazwisko: nazwisko.toUpperCase(),
+        rocznik: rocznik,
+        plec: plec,
+        kategoria_wiekowa: kategoriaWiekowa,
+        pelna_kategoria: pelnaKategoria,
+        konkurencja1: konkurencja1,
+        konkurencja2: konkurencja2 || "",
+        nr_startowy: nrStartowy,
+        email: email || "",
+        pakiet_odebrany: "TAK",
+        rezygnacja: "FALSE"
+    };
+    
+    try {
+        await database.ref(`zawodnicy/${newId}`).set(newPlayer);
+        showAlert(`✅ Dodano! Nowe ID: ${newId}`, false);
+        clearAddForm();
+        closeAddModal();
+        handleIdFound(newId);
+    } catch(err) {
+        showAlert(`Błąd: ${err.message}`);
+    }
+}
+	
     async function deletePlayer(id) {
         if (!isFirebaseConnected) return false;
         
@@ -740,12 +774,21 @@
 async function saveEdits() {
     if(!currentPlayerId) return;
     
+    const konk1 = editKonk1.value;
+    const konk2 = editKonk2.value;
+    if (!czyKonkurencjeRozne(konk1, konk2)) {
+    const msg = "❌ Konkurencja 1 i Konkurencja 2 nie mogą być takie same! Wybierz różne konkurencje.";
+    alert(msg);  // okno dialogowe – na pewno zauważone
+    showAlert(msg, true);
+    return;
+}
+    
     const numerStartowy = editNrStartowy.value.trim();
     if (!numerStartowy || numerStartowy === "") {
         const userConfirmed = confirm("⚠️ Ostrzeżenie! Zapisujesz zawodnika bez numeru startowego. Czy na pewno chcesz kontynuować?");
         if (!userConfirmed) {
             showAlert("Anulowano zapis", false);
-            return; // przerywamy zapis
+            return;
         }
         showAlert("⚠️ Uwaga! Zapisano zawodnika bez numeru startowego.", true);
     }
