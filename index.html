@@ -89,6 +89,11 @@
             justify-content: space-between;
             margin-bottom: 10px;
         }
+		button.info:disabled {
+    background: #6c757d !important;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
         @media (max-width: 500px) { .container { padding: 16px; } }
     </style>
     <!-- Firebase SDK -->
@@ -723,6 +728,7 @@
             currentPlayerId = id;
             currentPlayerData = result.data;
             resultPanel.style.display = 'block';
+			disableScannerControls();
             renderPlayerPanel(result.data);
             showAlert(`✅ Znaleziono: ${result.data.imie} ${result.data.nazwisko}`, false);
         } else {
@@ -731,83 +737,116 @@
         }
     }
     
-    async function saveEdits() {
-        if(!currentPlayerId) return;
-        const updates = {};
-        
-        const newImie = editImie.value;
-        const newNazwisko = editNazwisko.value;
-        const newRocznik = editRocznik.value;
-        const newPlec = currentPlec;
-        const newKonk1 = editKonk1.value;
-        const newKonk2 = editKonk2.value;
-        const newNrStartowy = editNrStartowy.value;
-        const newEmail = editEmail.value;
-        const newResign = editRezygnacja.checked ? 'TRUE' : 'FALSE';
-        
-        if(newImie !== (currentPlayerData?.imie || '')) updates.imie = newImie.toUpperCase();
-        if(newNazwisko !== (currentPlayerData?.nazwisko || '')) updates.nazwisko = newNazwisko.toUpperCase();
-        if(newRocznik !== (currentPlayerData?.rocznik || '')) updates.rocznik = newRocznik;
-        if(newPlec !== (currentPlayerData?.plec || '')) updates.plec = newPlec;
-        if(newKonk1 !== (currentPlayerData?.konkurencja1 || '')) updates.konkurencja1 = newKonk1;
-        if(newKonk2 !== (currentPlayerData?.konkurencja2 || '')) updates.konkurencja2 = newKonk2;
-        if(newNrStartowy !== (currentPlayerData?.nr_startowy || '')) updates.nr_startowy = newNrStartowy;
-        if(newEmail !== (currentPlayerData?.email || '')) updates.email = newEmail;
-        if(newResign !== (currentPlayerData?.rezygnacja || 'FALSE')) updates.rezygnacja = newResign;
-        
-        // Jeśli zmienił się rocznik lub płeć – przelicz kategorię
-        const rocznikChanged = (newRocznik !== (currentPlayerData?.rocznik || ''));
-        const plecChanged = (newPlec !== (currentPlayerData?.plec || ''));
-        
-        if (rocznikChanged || plecChanged) {
-            const kategoriaWiekowa = getKategoriaZRocznika(newRocznik);
-            const pelnaKategoria = (newPlec === 'M' || newPlec === 'K') ? `${newPlec} ${kategoriaWiekowa}` : '';
-            updates.kategoria_wiekowa = kategoriaWiekowa;
-            updates.pelna_kategoria = pelnaKategoria;
+async function saveEdits() {
+    if(!currentPlayerId) return;
+    
+    const numerStartowy = editNrStartowy.value.trim();
+    if (!numerStartowy || numerStartowy === "") {
+        const userConfirmed = confirm("⚠️ Ostrzeżenie! Zapisujesz zawodnika bez numeru startowego. Czy na pewno chcesz kontynuować?");
+        if (!userConfirmed) {
+            showAlert("Anulowano zapis", false);
+            return; // przerywamy zapis
         }
-        
-        if(Object.keys(updates).length === 0) { 
-            showAlert("Brak zmian", false); 
-            return; 
-        }
-        
-        if(await updatePlayer(currentPlayerId, updates)) {
-            const refreshed = await fetchPlayerById(currentPlayerId);
-            if(refreshed?.success) { 
-                currentPlayerData = refreshed.data; 
-                renderPlayerPanel(refreshed.data);
-                showAlert("✅ Zapisano zmiany!", false);
-            }
-        }
+        showAlert("⚠️ Uwaga! Zapisano zawodnika bez numeru startowego.", true);
     }
     
-    async function confirmPackage() {
-        if(!currentPlayerId) return;
-        if(currentPlayerData?.pakiet_odebrany === 'TAK') { showAlert("Pakiet już odebrany!", false); return; }
-        if(await updatePlayer(currentPlayerId, { pakiet_odebrany: 'TAK' })) {
-            const refreshed = await fetchPlayerById(currentPlayerId);
-            if(refreshed?.success) { 
-                currentPlayerData = refreshed.data; 
-                renderPlayerPanel(refreshed.data);
-                showAlert("✅ Pakiet odebrany!", false);
-                playBeep();
-            }
-        }
+    const updates = {};
+    
+    const newImie = editImie.value;
+    const newNazwisko = editNazwisko.value;
+    const newRocznik = editRocznik.value;
+    const newPlec = currentPlec;
+    const newKonk1 = editKonk1.value;
+    const newKonk2 = editKonk2.value;
+    const newNrStartowy = numerStartowy;
+    const newEmail = editEmail.value;
+    const newResign = editRezygnacja.checked ? 'TRUE' : 'FALSE';
+    
+    if(newImie !== (currentPlayerData?.imie || '')) updates.imie = newImie.toUpperCase();
+    if(newNazwisko !== (currentPlayerData?.nazwisko || '')) updates.nazwisko = newNazwisko.toUpperCase();
+    if(newRocznik !== (currentPlayerData?.rocznik || '')) updates.rocznik = newRocznik;
+    if(newPlec !== (currentPlayerData?.plec || '')) updates.plec = newPlec;
+    if(newKonk1 !== (currentPlayerData?.konkurencja1 || '')) updates.konkurencja1 = newKonk1;
+    if(newKonk2 !== (currentPlayerData?.konkurencja2 || '')) updates.konkurencja2 = newKonk2;
+    if(newNrStartowy !== (currentPlayerData?.nr_startowy || '')) updates.nr_startowy = newNrStartowy;
+    if(newEmail !== (currentPlayerData?.email || '')) updates.email = newEmail;
+    if(newResign !== (currentPlayerData?.rezygnacja || 'FALSE')) updates.rezygnacja = newResign;
+    
+    const rocznikChanged = (newRocznik !== (currentPlayerData?.rocznik || ''));
+    const plecChanged = (newPlec !== (currentPlayerData?.plec || ''));
+    
+    if (rocznikChanged || plecChanged) {
+        const kategoriaWiekowa = getKategoriaZRocznika(newRocznik);
+        const pelnaKategoria = (newPlec === 'M' || newPlec === 'K') ? `${newPlec} ${kategoriaWiekowa}` : '';
+        updates.kategoria_wiekowa = kategoriaWiekowa;
+        updates.pelna_kategoria = pelnaKategoria;
     }
     
+    if(Object.keys(updates).length === 0) { 
+        showAlert("Brak zmian", false); 
+        return; 
+    }
+    
+    if(await updatePlayer(currentPlayerId, updates)) {
+        const refreshed = await fetchPlayerById(currentPlayerId);
+        if(refreshed?.success) { 
+            currentPlayerData = refreshed.data; 
+            renderPlayerPanel(refreshed.data);
+            showSavedMessage(refreshed.data);
+            showAlert("✅ Zapisano zmiany!", false);
+        }
+    }
+}
+async function confirmPackage() {
+    console.log("===> confirmPackage wywołane");
+    if(!currentPlayerId) {
+        console.log("Brak currentPlayerId");
+        return;
+    }
+    if(currentPlayerData?.pakiet_odebrany === 'TAK') { 
+        showAlert("Pakiet już odebrany!", false); 
+        return; 
+    }
+    
+    const numerStartowyInput = document.getElementById('editNrStartowy');
+    const numerStartowy = numerStartowyInput ? numerStartowyInput.value.trim() : '';
+    console.log("Numer startowy (trim):", `"${numerStartowy}"`, "długość:", numerStartowy.length);
+    
+    if (!numerStartowy || numerStartowy === "") {
+    alert("❌ Nie można odebrać pakietu bez nadania numeru startowego! Wpisz numer startowy.");
+    return;}
+    
+    const updates = {
+        pakiet_odebrany: 'TAK',
+        nr_startowy: numerStartowy
+    };
+    
+    if(await updatePlayer(currentPlayerId, updates)) {
+        const refreshed = await fetchPlayerById(currentPlayerId);
+        if(refreshed?.success) { 
+            currentPlayerData = refreshed.data; 
+            renderPlayerPanel(refreshed.data);
+            showAlert(`✅ Pakiet odebrany! Numer startowy ${numerStartowy} został przypisany.`, false);
+            playBeep();
+        }
+    }
+} 
+ 
     async function toggleResign() {
         if(!currentPlayerId) return;
         const currentResign = currentPlayerData?.rezygnacja === 'TRUE';
         const newResign = !currentResign;
         if(confirm(`Czy na pewno chcesz ${newResign ? 'zarejestrować rezygnację' : 'cofnąć rezygnację'}?`)) {
             if(await updatePlayer(currentPlayerId, { rezygnacja: newResign ? 'TRUE' : 'FALSE' })) {
-                const refreshed = await fetchPlayerById(currentPlayerId);
-                if(refreshed?.success) { 
-                    currentPlayerData = refreshed.data; 
-                    renderPlayerPanel(refreshed.data);
-                    playBeep();
-                }
-            }
+				const refreshed = await fetchPlayerById(currentPlayerId);
+				if(refreshed?.success) { 
+					currentPlayerData = refreshed.data; 
+					renderPlayerPanel(refreshed.data);
+					playBeep();
+					const komunikat = newResign ? "⚠️ Zarejestrowano rezygnację zawodnika " + refreshed.data.imie + " " + refreshed.data.nazwisko : "✅ Cofnięto rezygnację";
+					showAlert(komunikat, false);
+				}
+			}
         }
     }
     
@@ -821,16 +860,83 @@
         }
     }
     
-    function clearPanel() {
-        resultPanel.style.display = 'none';
-        currentPlayerId = null;
-        currentPlayerData = null;
-        manualIdInput.value = '';
-        searchResults.style.display = 'none';
-        searchNazwisko.value = '';
-        setDebug('Panel wyczyszczony');
+    async function clearPanel() {
+    const numerStartowy = editNrStartowy.value.trim();
+    
+    // Jeśli numer startowy został nadany (niepusty)
+    if (numerStartowy && numerStartowy !== "") {
+        const userConfirmed = confirm("Czy zapisać zmiany przed powrotem do skanowania?");
+        if (userConfirmed) {
+            // Wywołaj zapis zmian (zakładając, że saveEdits zwraca Promise)
+            await saveEdits();
+            setDebug('Zapisano zmiany przed powrotem do skanowania');
+        }
+    } else {
+        // Brak numeru startowego – stare ostrzeżenie
+        const userConfirmed = confirm("⚠️ Uwaga! Numer startowy nie został nadany. Czy na pewno chcesz wrócić do skanowania?");
+        if (!userConfirmed) {
+            setDebug('Anulowano powrót do skanowania');
+            return;
+        }
     }
     
+    // Czyszczenie panelu i odblokowanie skanera (tak samo jak wcześniej)
+    resultPanel.style.display = 'none';
+    currentPlayerId = null;
+    currentPlayerData = null;
+    manualIdInput.value = '';
+    searchResults.style.display = 'none';
+    searchNazwisko.value = '';
+    setDebug('Panel wyczyszczony');
+    enableScannerControls();
+}
+
+	function disableScannerControls() {
+		if (startScanBtn) {
+			startScanBtn.disabled = true;
+			startScanBtn.style.opacity = '0.6';
+			startScanBtn.style.cursor = 'not-allowed';
+		}
+		// Blokowanie przycisków i pól wyszukiwania
+		if (manualSearchBtn) {
+			manualSearchBtn.disabled = true;
+			manualSearchBtn.style.opacity = '0.6';
+		}
+		if (searchByNazwiskoBtn) {
+			searchByNazwiskoBtn.disabled = true;
+			searchByNazwiskoBtn.style.opacity = '0.6';
+		}
+		if (manualIdInput) manualIdInput.disabled = true;
+		if (searchNazwisko) searchNazwisko.disabled = true;
+		if (openAddModalBtn) openAddModalBtn.disabled = true;
+		setDebug('🔒 Skaner i wyszukiwanie zablokowane – wróć do skanowania aby odblokować');
+	}
+
+	function enableScannerControls() {
+		if (startScanBtn) {
+			startScanBtn.disabled = false;
+			startScanBtn.style.opacity = '1';
+			startScanBtn.style.cursor = 'pointer';
+		}
+		if (manualSearchBtn) {
+			manualSearchBtn.disabled = false;
+			manualSearchBtn.style.opacity = '1';
+		}
+		if (searchByNazwiskoBtn) {
+			searchByNazwiskoBtn.disabled = false;
+			searchByNazwiskoBtn.style.opacity = '1';
+		}
+		if (manualIdInput) manualIdInput.disabled = false;
+		if (searchNazwisko) searchNazwisko.disabled = false;
+		if (openAddModalBtn) openAddModalBtn.disabled = false;
+		setDebug('🔓 Skaner i wyszukiwanie odblokowane');
+	}
+	
+	function showSavedMessage(zawodnik) {
+		const nrStartowy = zawodnik.nr_startowy || 'brak numeru';
+		showAlert(`✅ Zawodnik ${zawodnik.imie} ${zawodnik.nazwisko} (nr startowy: ${nrStartowy}) został zapisany!`, false);
+	}	
+	
     async function startScanner() {
         if (isScanning) return;
         if (!navigator.mediaDevices?.getUserMedia) { showAlert('Brak kamery'); return; }
