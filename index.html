@@ -254,6 +254,7 @@
     
     // Mapowanie kategorii (rocznik -> kategoria wiekowa)
     let mapowanieKategorii = {};
+	let zakazaneKonkurencje = {}; // struktura: { "kategoria": ["konkurencja1", "konkurencja2"] }
 
     // Inicjalizacja Firebase
     try {
@@ -349,6 +350,21 @@
     }
     
     // ==================== MAPOWANIE KATEGORII ====================
+	function loadZakazaneKonkurencje() {
+		if (!database) return;
+		database.ref('zakazane_konkurencje').once('value').then(snapshot => {
+			const data = snapshot.val();
+			if (data) {
+				zakazaneKonkurencje = data;
+				setDebug(`✅ Załadowano zakazane konkurencje (${Object.keys(zakazaneKonkurencje).length} kategorii)`);
+			} else {
+				zakazaneKonkurencje = {};
+				setDebug('ℹ️ Brak zdefiniowanych zakazanych konkurencji');
+			}
+		}).catch(err => setDebug(`❌ Błąd ładowania zakazanych konkurencji: ${err.message}`));
+	}
+	
+	
     function loadMapowanieKategorii() {
         if (!database) return;
         database.ref('mapowanie_kategorii').once('value').then(snapshot => {
@@ -450,6 +466,7 @@
         setDebug('✅ Inicjalizacja aplikacji (Firebase + Auth)...');
         loadKonkurencje();
         loadMapowanieKategorii();
+		loadZakazaneKonkurencje(); // <-- DODAJ TĘ LINIĘ
         setupPlecToggles();
         setDebug('✅ Aplikacja gotowa!');
     }
@@ -566,83 +583,101 @@
     }
     
     async function addNewZawodnik() {
-    if (!isFirebaseConnected) {
-        showAlert("❌ Brak połączenia z Firebase");
-        return;
-    }
-    
-    const imie = document.getElementById('newImie').value.trim();
-    const nazwisko = document.getElementById('newNazwisko').value.trim();
-    const rocznik = document.getElementById('newRocznik').value.trim();
-    const plec = getSelectedPlec('newPlecGroup');
-    const konkurencja1 = document.getElementById('newKonk1').value;
-    const konkurencja2 = document.getElementById('newKonk2').value;
-    const nrStartowy = document.getElementById('newNrStartowy').value.trim();
-    const email = document.getElementById('newEmail').value.trim();
-    
-    // === WALIDACJA PÓL OBOWIĄZKOWYCH ===
-    if (!imie) {
-        showAlert("❌ Imię jest wymagane!", true);
-        return;
-    }
-    if (!nazwisko) {
-        showAlert("❌ Nazwisko jest wymagane!", true);
-        return;
-    }
-    if (!rocznik) {
-        showAlert("❌ Rocznik jest wymagany!", true);
-        return;
-    }
-    if (!plec) {
-        showAlert("❌ Płeć jest wymagana!", true);
-        return;
-    }
-    if (!konkurencja1) {
-        showAlert("❌ Konkurencja 1 jest wymagana!", true);
-        return;
-    }
-    if (!nrStartowy) {
-        showAlert("❌ Numer startowy jest wymagany!", true);
-        return;
-    }
-    
-    // Sprawdzenie, czy konkurencje nie są takie same (jeśli podano drugą)
-    if (konkurencja1 && konkurencja2 && konkurencja1 === konkurencja2) {
-        showAlert("❌ Konkurencja 1 i Konkurencja 2 nie mogą być takie same!", true);
-        return;
-    }
-    
-    const newId = Date.now().toString() + Math.floor(Math.random() * 1000).toString();
-    
-    const kategoriaWiekowa = getKategoriaZRocznika(rocznik);
-    const pelnaKategoria = (plec === 'M' || plec === 'K') ? `${plec} ${kategoriaWiekowa}` : '';
-    
-    const newPlayer = {
-        id: newId,
-        imie: imie.toUpperCase(),
-        nazwisko: nazwisko.toUpperCase(),
-        rocznik: rocznik,
-        plec: plec,
-        kategoria_wiekowa: kategoriaWiekowa,
-        pelna_kategoria: pelnaKategoria,
-        konkurencja1: konkurencja1,
-        konkurencja2: konkurencja2 || "",
-        nr_startowy: nrStartowy,
-        email: email || "",
-        pakiet_odebrany: "TAK",
-        rezygnacja: "FALSE"
-    };
-    
-    try {
-        await database.ref(`zawodnicy/${newId}`).set(newPlayer);
-        showAlert(`✅ Dodano! Nowe ID: ${newId}`, false);
-        clearAddForm();
-        closeAddModal();
-        handleIdFound(newId);
-    } catch(err) {
-        showAlert(`Błąd: ${err.message}`);
-    }
-}
+		if (!isFirebaseConnected) {
+			showAlert("❌ Brak połączenia z Firebase");
+			return;
+		}
+		
+		const imie = document.getElementById('newImie').value.trim();
+		const nazwisko = document.getElementById('newNazwisko').value.trim();
+		const rocznik = document.getElementById('newRocznik').value.trim();
+		const plec = getSelectedPlec('newPlecGroup');
+		const konkurencja1 = document.getElementById('newKonk1').value;
+		const konkurencja2 = document.getElementById('newKonk2').value;
+		const nrStartowy = document.getElementById('newNrStartowy').value.trim();
+		const email = document.getElementById('newEmail').value.trim();
+		
+		// === WALIDACJA PÓL OBOWIĄZKOWYCH ===
+		if (!imie) {
+			showAlert("❌ Imię jest wymagane!", true);
+			return;
+		}
+		if (!nazwisko) {
+			showAlert("❌ Nazwisko jest wymagane!", true);
+			return;
+		}
+		if (!rocznik) {
+			showAlert("❌ Rocznik jest wymagany!", true);
+			return;
+		}
+		if (!plec) {
+			showAlert("❌ Płeć jest wymagana!", true);
+			return;
+		}
+		if (!konkurencja1) {
+			showAlert("❌ Konkurencja 1 jest wymagana!", true);
+			return;
+		}
+		if (!nrStartowy) {
+			showAlert("❌ Numer startowy jest wymagany!", true);
+			return;
+		}
+		
+		// Sprawdzenie, czy konkurencje nie są takie same
+		if (konkurencja1 && konkurencja2 && konkurencja1 === konkurencja2) {
+			showAlert("❌ Konkurencja 1 i Konkurencja 2 nie mogą być takie same!", true);
+			return;
+		}
+		
+		// === SPRAWDZENIE ZAKAZANYCH KONKURENCJI ===
+		const kategoriaWiekowa = getKategoriaZRocznika(rocznik);
+		const pelnaKategoria = (plec === 'M' || plec === 'K') ? `${plec} ${kategoriaWiekowa}` : '';
+		
+		// Sprawdź konkurencję 1
+		if (pelnaKategoria && zakazaneKonkurencje[pelnaKategoria]) {
+			const zakazane = zakazaneKonkurencje[pelnaKategoria];
+			if (zakazane.includes(konkurencja1)) {
+				const msg = `❌ Konkurencja "${konkurencja1}" jest ZAKAZANA dla kategorii "${pelnaKategoria}"!\n\nWybierz inną konkurencję.`;
+				alert(msg);
+				showAlert(msg, true);
+				return;
+			}
+			if (konkurencja2 && zakazane.includes(konkurencja2)) {
+				const msg = `❌ Konkurencja "${konkurencja2}" jest ZAKAZANA dla kategorii "${pelnaKategoria}"!\n\nWybierz inną konkurencję.`;
+				alert(msg);
+				showAlert(msg, true);
+				return;
+			}
+		}
+		
+		const newId = Date.now().toString() + Math.floor(Math.random() * 1000).toString();
+		
+		const newPlayer = {
+			id: newId,
+			imie: imie.toUpperCase(),
+			nazwisko: nazwisko.toUpperCase(),
+			rocznik: rocznik,
+			plec: plec,
+			kategoria_wiekowa: kategoriaWiekowa,
+			pelna_kategoria: pelnaKategoria,
+			konkurencja1: konkurencja1,
+			konkurencja2: konkurencja2 || "",
+			nr_startowy: nrStartowy,
+			email: email || "",
+			pakiet_odebrany: "TAK",
+			rezygnacja: "FALSE"
+		};
+		
+		try {
+			await database.ref(`zawodnicy/${newId}`).set(newPlayer);
+			showAlert(`✅ Dodano! Nowe ID: ${newId}`, false);
+			clearAddForm();
+			closeAddModal();
+			handleIdFound(newId);
+		} catch(err) {
+			showAlert(`Błąd: ${err.message}`);
+		}
+	}
 	
     async function deletePlayer(id) {
         if (!isFirebaseConnected) return false;
@@ -719,24 +754,50 @@
     function closeAddModal() { document.getElementById('addModal').style.display = 'none'; }
     
     function renderPlayerPanel(player) {
-        const d = player;
-        const isTaken = d.pakiet_odebrany === 'TAK';
-        const isResigned = String(d.rezygnacja || '').toUpperCase() === 'TRUE';
-        
-        if (viewId) viewId.innerText = d.id || '-';
-        
-        playerInfoDiv.innerHTML = `
-            <div class="info-row"><span class="info-label">ID:</span><span class="info-value">${d.id || ''}</span></div>
-            <div class="info-row"><span class="info-label">Imię i nazwisko:</span><span class="info-value">${d.imie || ''} ${d.nazwisko || ''}</span></div>
-            <div class="info-row"><span class="info-label">Rocznik:</span><span class="info-value">${d.rocznik || '—'}</span></div>
-            <div class="info-row"><span class="info-label">Płeć:</span><span class="info-value">${d.plec === 'M' ? 'Mężczyzna' : (d.plec === 'K' ? 'Kobieta' : '—')}</span></div>
-            <div class="info-row"><span class="info-label">Kategoria:</span><span class="info-value">${d.pelna_kategoria || d.kategoria_wiekowa || '—'}</span></div>
-            <div class="info-row"><span class="info-label">Konkurencje:</span><span class="info-value">${d.konkurencja1 || '—'} ${d.konkurencja2 ? '/ ' + d.konkurencja2 : ''}</span></div>
-            <div class="info-row"><span class="info-label">Numer startowy:</span><span class="info-value">${d.nr_startowy || 'Nieprzydzielony'}</span></div>
-            <div class="info-row"><span class="info-label">Email:</span><span class="info-value">${d.email || '—'}</span></div>
-            <div class="info-row"><span class="info-label">Status pakietu:</span><span class="package-status ${isTaken ? '' : 'package-absent'}">${isTaken ? '✅ ODEBRANY' : '❌ NIEODEBRANY'}</span></div>
-            <div class="info-row"><span class="info-label">Rezygnacja/Aktywny:</span><span class="${isResigned ? 'resign-status-true' : 'resign-status-false'}">${isResigned ? '❌ ZREZYGNOWAŁ' : '✅ AKTYWNY'}</span></div>
-        `;
+		
+		const d = player;
+		const isTaken = d.pakiet_odebrany === 'TAK';
+		const isResigned = String(d.rezygnacja || '').toUpperCase() === 'TRUE';
+		
+		if (viewId) viewId.innerText = d.id || '-';
+		
+		// === SPRAWDZENIE ZAKAZANYCH KONKURENCJI ===
+		const kategoria = d.pelna_kategoria || d.kategoria_wiekowa || '';
+		const konkurencjeZawodnika = [d.konkurencja1, d.konkurencja2].filter(k => k && k !== '');
+		let zakazaneKomunikaty = [];
+		
+		if (kategoria && zakazaneKonkurencje[kategoria]) {
+			const zakazane = zakazaneKonkurencje[kategoria];
+			for (const konk of konkurencjeZawodnika) {
+				if (zakazane.includes(konk)) {
+					zakazaneKomunikaty.push(`⚠️ Konkurencja "${konk}" jest zakazana dla kategorii "${kategoria}"`);
+				}
+			}
+		}
+		
+		let ostrzezenieHtml = '';
+		if (zakazaneKomunikaty.length > 0) {
+			ostrzezenieHtml = `
+				<div class="info-row" style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 8px; margin: 8px 0;">
+					<span style="color: #856404; font-weight: bold;">⚠️ OSTRZEŻENIE:</span>
+					<span>${zakazaneKomunikaty.join('<br>')}</span>
+				</div>
+			`;
+		}
+		
+		playerInfoDiv.innerHTML = `
+			<div class="info-row"><span class="info-label">ID:</span><span class="info-value">${d.id || ''}</span></div>
+			<div class="info-row"><span class="info-label">Imię i nazwisko:</span><span class="info-value">${d.imie || ''} ${d.nazwisko || ''}</span></div>
+			<div class="info-row"><span class="info-label">Rocznik:</span><span class="info-value">${d.rocznik || '—'}</span></div>
+			<div class="info-row"><span class="info-label">Płeć:</span><span class="info-value">${d.plec === 'M' ? 'Mężczyzna' : (d.plec === 'K' ? 'Kobieta' : '—')}</span></div>
+			<div class="info-row"><span class="info-label">Kategoria:</span><span class="info-value">${d.pelna_kategoria || d.kategoria_wiekowa || '—'}</span></div>
+			<div class="info-row"><span class="info-label">Konkurencje:</span><span class="info-value">${d.konkurencja1 || '—'} ${d.konkurencja2 ? '/ ' + d.konkurencja2 : ''}</span></div>
+			<div class="info-row"><span class="info-label">Numer startowy:</span><span class="info-value">${d.nr_startowy || 'Nieprzydzielony'}</span></div>
+			<div class="info-row"><span class="info-label">Email:</span><span class="info-value">${d.email || '—'}</span></div>
+			<div class="info-row"><span class="info-label">Status pakietu:</span><span class="package-status ${isTaken ? '' : 'package-absent'}">${isTaken ? '✅ ODEBRANY' : '❌ NIEODEBRANY'}</span></div>
+			<div class="info-row"><span class="info-label">Rezygnacja/Aktywny:</span><span class="${isResigned ? 'resign-status-true' : 'resign-status-false'}">${isResigned ? '❌ ZREZYGNOWAŁ' : '✅ AKTYWNY'}</span></div>
+			${ostrzezenieHtml}
+		`;
         
         confirmPackageBtn.style.opacity = isTaken ? '0.6' : '1';
         toggleResignBtn.textContent = isResigned ? '🔄 Cofnij rezygnację' : '❌ Zarejestruj rezygnację';
@@ -772,74 +833,95 @@
     }
     
 async function saveEdits() {
-    if(!currentPlayerId) return;
-    
-    const konk1 = editKonk1.value;
-    const konk2 = editKonk2.value;
-    if (!czyKonkurencjeRozne(konk1, konk2)) {
-    const msg = "❌ Konkurencja 1 i Konkurencja 2 nie mogą być takie same! Wybierz różne konkurencje.";
-    alert(msg);  // okno dialogowe – na pewno zauważone
-    showAlert(msg, true);
-    return;
-}
-    
-    const numerStartowy = editNrStartowy.value.trim();
-    if (!numerStartowy || numerStartowy === "") {
-        const userConfirmed = confirm("⚠️ Ostrzeżenie! Zapisujesz zawodnika bez numeru startowego. Czy na pewno chcesz kontynuować?");
-        if (!userConfirmed) {
-            showAlert("Anulowano zapis", false);
-            return;
-        }
-        showAlert("⚠️ Uwaga! Zapisano zawodnika bez numeru startowego.", true);
-    }
-    
-    const updates = {};
-    
-    const newImie = editImie.value;
-    const newNazwisko = editNazwisko.value;
-    const newRocznik = editRocznik.value;
-    const newPlec = currentPlec;
-    const newKonk1 = editKonk1.value;
-    const newKonk2 = editKonk2.value;
-    const newNrStartowy = numerStartowy;
-    const newEmail = editEmail.value;
-    const newResign = editRezygnacja.checked ? 'TRUE' : 'FALSE';
-    
-    if(newImie !== (currentPlayerData?.imie || '')) updates.imie = newImie.toUpperCase();
-    if(newNazwisko !== (currentPlayerData?.nazwisko || '')) updates.nazwisko = newNazwisko.toUpperCase();
-    if(newRocznik !== (currentPlayerData?.rocznik || '')) updates.rocznik = newRocznik;
-    if(newPlec !== (currentPlayerData?.plec || '')) updates.plec = newPlec;
-    if(newKonk1 !== (currentPlayerData?.konkurencja1 || '')) updates.konkurencja1 = newKonk1;
-    if(newKonk2 !== (currentPlayerData?.konkurencja2 || '')) updates.konkurencja2 = newKonk2;
-    if(newNrStartowy !== (currentPlayerData?.nr_startowy || '')) updates.nr_startowy = newNrStartowy;
-    if(newEmail !== (currentPlayerData?.email || '')) updates.email = newEmail;
-    if(newResign !== (currentPlayerData?.rezygnacja || 'FALSE')) updates.rezygnacja = newResign;
-    
-    const rocznikChanged = (newRocznik !== (currentPlayerData?.rocznik || ''));
-    const plecChanged = (newPlec !== (currentPlayerData?.plec || ''));
-    
-    if (rocznikChanged || plecChanged) {
-        const kategoriaWiekowa = getKategoriaZRocznika(newRocznik);
-        const pelnaKategoria = (newPlec === 'M' || newPlec === 'K') ? `${newPlec} ${kategoriaWiekowa}` : '';
-        updates.kategoria_wiekowa = kategoriaWiekowa;
-        updates.pelna_kategoria = pelnaKategoria;
-    }
-    
-    if(Object.keys(updates).length === 0) { 
-        showAlert("Brak zmian", false); 
-        return; 
-    }
-    
-    if(await updatePlayer(currentPlayerId, updates)) {
-        const refreshed = await fetchPlayerById(currentPlayerId);
-        if(refreshed?.success) { 
-            currentPlayerData = refreshed.data; 
-            renderPlayerPanel(refreshed.data);
-            showSavedMessage(refreshed.data);
-            showAlert("✅ Zapisano zmiany!", false);
-        }
-    }
-}
+		if(!currentPlayerId) return;
+		
+		const konk1 = editKonk1.value;
+		const konk2 = editKonk2.value;
+		
+		// Sprawdzenie, czy konkurencje nie są takie same
+		if (!czyKonkurencjeRozne(konk1, konk2)) {
+			const msg = "❌ Konkurencja 1 i Konkurencja 2 nie mogą być takie same! Wybierz różne konkurencje.";
+			alert(msg);
+			showAlert(msg, true);
+			return;
+		}
+		
+		// === SPRAWDZENIE ZAKAZANYCH KONKURENCJI ===
+		const kategoria = currentPlayerData?.pelna_kategoria || currentPlayerData?.kategoria_wiekowa || '';
+		if (kategoria && zakazaneKonkurencje[kategoria]) {
+			const zakazane = zakazaneKonkurencje[kategoria];
+			if (zakazane.includes(konk1)) {
+				const msg = `❌ Konkurencja "${konk1}" jest ZAKAZANA dla kategorii "${kategoria}"! Wybierz inną konkurencję.`;
+				alert(msg);
+				showAlert(msg, true);
+				return;
+			}
+			if (konk2 && zakazane.includes(konk2)) {
+				const msg = `❌ Konkurencja "${konk2}" jest ZAKAZANA dla kategorii "${kategoria}"! Wybierz inną konkurencję.`;
+				alert(msg);
+				showAlert(msg, true);
+				return;
+			}
+		}
+		
+		const numerStartowy = editNrStartowy.value.trim();
+		if (!numerStartowy || numerStartowy === "") {
+			const userConfirmed = confirm("⚠️ Ostrzeżenie! Zapisujesz zawodnika bez numeru startowego. Czy na pewno chcesz kontynuować?");
+			if (!userConfirmed) {
+				showAlert("Anulowano zapis", false);
+				return;
+			}
+			showAlert("⚠️ Uwaga! Zapisano zawodnika bez numeru startowego.", true);
+		}
+		
+		const updates = {};
+		
+		const newImie = editImie.value;
+		const newNazwisko = editNazwisko.value;
+		const newRocznik = editRocznik.value;
+		const newPlec = currentPlec;
+		const newKonk1 = konk1;
+		const newKonk2 = konk2;
+		const newNrStartowy = numerStartowy;
+		const newEmail = editEmail.value;
+		const newResign = editRezygnacja.checked ? 'TRUE' : 'FALSE';
+		
+		if(newImie !== (currentPlayerData?.imie || '')) updates.imie = newImie.toUpperCase();
+		if(newNazwisko !== (currentPlayerData?.nazwisko || '')) updates.nazwisko = newNazwisko.toUpperCase();
+		if(newRocznik !== (currentPlayerData?.rocznik || '')) updates.rocznik = newRocznik;
+		if(newPlec !== (currentPlayerData?.plec || '')) updates.plec = newPlec;
+		if(newKonk1 !== (currentPlayerData?.konkurencja1 || '')) updates.konkurencja1 = newKonk1;
+		if(newKonk2 !== (currentPlayerData?.konkurencja2 || '')) updates.konkurencja2 = newKonk2;
+		if(newNrStartowy !== (currentPlayerData?.nr_startowy || '')) updates.nr_startowy = newNrStartowy;
+		if(newEmail !== (currentPlayerData?.email || '')) updates.email = newEmail;
+		if(newResign !== (currentPlayerData?.rezygnacja || 'FALSE')) updates.rezygnacja = newResign;
+		
+		const rocznikChanged = (newRocznik !== (currentPlayerData?.rocznik || ''));
+		const plecChanged = (newPlec !== (currentPlayerData?.plec || ''));
+		
+		if (rocznikChanged || plecChanged) {
+			const kategoriaWiekowa = getKategoriaZRocznika(newRocznik);
+			const pelnaKategoria = (newPlec === 'M' || newPlec === 'K') ? `${newPlec} ${kategoriaWiekowa}` : '';
+			updates.kategoria_wiekowa = kategoriaWiekowa;
+			updates.pelna_kategoria = pelnaKategoria;
+		}
+		
+		if(Object.keys(updates).length === 0) { 
+			showAlert("Brak zmian", false); 
+			return; 
+		}
+		
+		if(await updatePlayer(currentPlayerId, updates)) {
+			const refreshed = await fetchPlayerById(currentPlayerId);
+			if(refreshed?.success) { 
+				currentPlayerData = refreshed.data; 
+				renderPlayerPanel(refreshed.data);
+				showSavedMessage(refreshed.data);
+				showAlert("✅ Zapisano zmiany!", false);
+			}
+		}
+	}
+
 async function confirmPackage() {
     console.log("===> confirmPackage wywołane");
     if(!currentPlayerId) {
@@ -851,13 +933,40 @@ async function confirmPackage() {
         return; 
     }
     
+    // === SPRAWDZENIE ZAKAZANYCH KONKURENCJI ===
+    const kategoria = currentPlayerData?.pelna_kategoria || currentPlayerData?.kategoria_wiekowa || '';
+    const konk1 = currentPlayerData?.konkurencja1 || '';
+    const konk2 = currentPlayerData?.konkurencja2 || '';
+    
+    if (kategoria && zakazaneKonkurencje[kategoria]) {
+        const zakazane = zakazaneKonkurencje[kategoria];
+        let zakazanaZnaleziona = false;
+        let zakazanaNazwa = '';
+        
+        if (zakazane.includes(konk1)) {
+            zakazanaZnaleziona = true;
+            zakazanaNazwa = konk1;
+        } else if (konk2 && zakazane.includes(konk2)) {
+            zakazanaZnaleziona = true;
+            zakazanaNazwa = konk2;
+        }
+        
+        if (zakazanaZnaleziona) {
+            const msg = `❌ Nie można odebrać pakietu! Zawodnik ma zakazaną konkurencję "${zakazanaNazwa}" dla kategorii "${kategoria}".\n\nZmień konkurencję na dozwoloną i spróbuj ponownie.`;
+            alert(msg);
+            showAlert(msg, true);
+            return;
+        }
+    }
+    
     const numerStartowyInput = document.getElementById('editNrStartowy');
     const numerStartowy = numerStartowyInput ? numerStartowyInput.value.trim() : '';
     console.log("Numer startowy (trim):", `"${numerStartowy}"`, "długość:", numerStartowy.length);
     
     if (!numerStartowy || numerStartowy === "") {
-    alert("❌ Nie można odebrać pakietu bez nadania numeru startowego! Wpisz numer startowy.");
-    return;}
+        alert("❌ Nie można odebrać pakietu bez nadania numeru startowego! Wpisz numer startowy.");
+        return;
+    }
     
     const updates = {
         pakiet_odebrany: 'TAK',
@@ -873,8 +982,8 @@ async function confirmPackage() {
             playBeep();
         }
     }
-} 
- 
+}
+
     async function toggleResign() {
         if(!currentPlayerId) return;
         const currentResign = currentPlayerData?.rezygnacja === 'TRUE';
